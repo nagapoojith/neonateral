@@ -7,7 +7,7 @@ import AlertCard from '@/components/dashboard/AlertCard';
 import BehaviorComparison from '@/components/charts/BehaviorComparison';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Baby, AlertCircle, Activity, Heart, CheckCircle2 } from 'lucide-react';
+import { Baby, AlertCircle, Activity, Heart, CheckCircle2, Clock, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -25,21 +25,31 @@ const Dashboard = () => {
     .filter((a) => !a.acknowledged)
     .slice(0, 5);
 
+  const currentTime = new Date().toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: true 
+  });
+
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">NICU Dashboard</h1>
             <p className="text-muted-foreground mt-1">
-              Welcome back, <span className="font-semibold text-primary">{user?.name}</span>. Real-time monitoring overview.
+              Welcome back, <span className="font-semibold text-primary">{user?.name}</span>
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="text-sm px-4 py-2 rounded-full border-status-normal/40 bg-status-normal-bg shadow-sm">
-              <div className="w-2.5 h-2.5 rounded-full bg-status-normal mr-2 animate-pulse" />
-              <span className="text-status-normal font-semibold">Live Monitoring</span>
+            <Badge variant="outline" className="text-sm px-3 py-1.5 rounded-lg border-muted-foreground/20 bg-card shadow-sm">
+              <Clock className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+              <span className="text-muted-foreground">{currentTime}</span>
+            </Badge>
+            <Badge variant="outline" className="text-sm px-3 py-1.5 rounded-lg border-status-normal/40 bg-status-normal-bg shadow-sm">
+              <div className="w-2 h-2 rounded-full bg-status-normal mr-2 animate-pulse" />
+              <span className="text-status-normal font-semibold">Live</span>
             </Badge>
           </div>
         </div>
@@ -108,10 +118,11 @@ const Dashboard = () => {
           {/* Baby Cards - 2 columns */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Monitored Babies</h2>
-              <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                Updated every 3 seconds
-              </span>
+              <h2 className="text-lg font-semibold text-foreground">Monitored Patients</h2>
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-status-normal" />
+                <span className="text-xs text-muted-foreground">Auto-refresh 3s</span>
+              </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               {babies.map((baby) => (

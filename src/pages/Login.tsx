@@ -20,23 +20,34 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    const result = await login(email, password);
-    
-    if (result.success) {
-      toast({
-        title: 'Welcome back!',
-        description: 'You have been successfully logged in.',
-      });
-      navigate('/dashboard', { replace: true });
-    } else {
+    try {
+      const result = await login(email, password);
+      
+      if (result.success) {
+        toast({
+          title: 'Welcome back!',
+          description: 'Redirecting to dashboard...',
+        });
+        // Small delay to allow session to be set before redirect
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 100);
+      } else {
+        toast({
+          title: 'Login failed',
+          description: result.error || 'Invalid email or password. Please try again.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+      }
+    } catch (error) {
       toast({
         title: 'Login failed',
-        description: result.error || 'Invalid email or password. Please try again.',
+        description: 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       });
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const features = [
