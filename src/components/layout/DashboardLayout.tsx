@@ -59,7 +59,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-background">
       {/* Top Navigation */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border/60 z-50 shadow-sm">
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           {/* Logo and mobile menu */}
           <div className="flex items-center gap-3">
@@ -71,11 +71,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-primary">
+            <Link to="/dashboard" className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-medical">
                 <Heart className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg text-foreground hidden sm:block">NeoGuard</span>
+              <span className="font-bold text-lg text-foreground hidden sm:block tracking-tight">NeoGuard</span>
             </Link>
           </div>
 
@@ -141,7 +141,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-16 bottom-0 w-64 bg-card border-r border-border z-40 transition-transform duration-300 lg:translate-x-0',
+          'fixed left-0 top-16 bottom-0 w-64 bg-card border-r border-border/60 z-40 transition-transform duration-300 lg:translate-x-0 shadow-sm',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -178,9 +178,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         </nav>
 
         {/* Sidebar footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border/60 bg-muted/30">
           <div className="text-xs text-muted-foreground text-center">
-            <p>NeoGuard v1.0</p>
+            <p className="font-medium">NeoGuard v1.0</p>
             <p className="mt-1">© 2024 Hospital Systems</p>
           </div>
         </div>

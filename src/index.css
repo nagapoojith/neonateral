@@ -6,74 +6,74 @@
 
 @layer base {
   :root {
-    /* Hospital-grade clean color palette */
-    --background: 200 20% 98%;
-    --foreground: 210 40% 20%;
+    /* Hospital-grade clean color palette - Professional Medical Blue Theme */
+    --background: 204 25% 97%;
+    --foreground: 210 40% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 40% 20%;
+    --card-foreground: 210 40% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 40% 20%;
+    --popover-foreground: 210 40% 15%;
 
-    /* Medical blue primary - calming and professional */
-    --primary: 200 85% 45%;
+    /* Calming Medical Blue - Primary */
+    --primary: 199 89% 48%;
     --primary-foreground: 0 0% 100%;
 
-    /* Soft gray-blue secondary */
-    --secondary: 200 20% 95%;
-    --secondary-foreground: 210 40% 30%;
+    /* Soft Blue-Gray Secondary */
+    --secondary: 204 20% 94%;
+    --secondary-foreground: 210 35% 30%;
 
-    --muted: 200 15% 94%;
-    --muted-foreground: 210 20% 50%;
+    --muted: 204 18% 93%;
+    --muted-foreground: 210 15% 45%;
 
-    /* Light teal accent */
-    --accent: 175 50% 94%;
-    --accent-foreground: 175 60% 30%;
+    /* Light Teal Accent - Clean Medical Feel */
+    --accent: 170 45% 93%;
+    --accent-foreground: 170 55% 28%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 200 20% 90%;
-    --input: 200 20% 90%;
-    --ring: 200 85% 45%;
+    --border: 204 22% 88%;
+    --input: 204 22% 88%;
+    --ring: 199 89% 48%;
 
     --radius: 0.875rem;
 
-    /* Status colors - clear medical indicators */
-    --status-normal: 152 60% 42%;
-    --status-normal-bg: 152 60% 95%;
-    --status-warning: 38 92% 50%;
-    --status-warning-bg: 38 92% 95%;
-    --status-critical: 0 72% 51%;
-    --status-critical-bg: 0 72% 96%;
+    /* Status colors - Clear Medical Indicators */
+    --status-normal: 152 65% 40%;
+    --status-normal-bg: 152 60% 94%;
+    --status-warning: 38 95% 50%;
+    --status-warning-bg: 38 95% 94%;
+    --status-critical: 0 75% 50%;
+    --status-critical-bg: 0 75% 95%;
 
-    /* Chart colors - softer medical tones */
-    --chart-heart: 0 65% 55%;
-    --chart-spo2: 200 85% 50%;
-    --chart-temp: 38 85% 50%;
+    /* Chart colors - Soft Medical Tones */
+    --chart-heart: 0 68% 55%;
+    --chart-spo2: 199 85% 50%;
+    --chart-temp: 38 90% 50%;
     --chart-movement: 152 60% 42%;
 
     /* Sidebar */
-    --sidebar-background: 200 25% 97%;
-    --sidebar-foreground: 210 40% 25%;
-    --sidebar-primary: 200 85% 45%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 210 35% 25%;
+    --sidebar-primary: 199 89% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 175 50% 94%;
-    --sidebar-accent-foreground: 175 60% 30%;
-    --sidebar-border: 200 20% 90%;
-    --sidebar-ring: 200 85% 45%;
+    --sidebar-accent: 170 45% 93%;
+    --sidebar-accent-foreground: 170 55% 28%;
+    --sidebar-border: 204 22% 88%;
+    --sidebar-ring: 199 89% 48%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(200 85% 45%), hsl(175 60% 45%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(200 20% 98%));
-    --gradient-critical: linear-gradient(135deg, hsl(0 72% 51%), hsl(0 72% 61%));
-    --gradient-hero: linear-gradient(135deg, hsl(200 85% 45%) 0%, hsl(175 60% 42%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(199 89% 48%), hsl(170 55% 45%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(204 25% 97%));
+    --gradient-critical: linear-gradient(135deg, hsl(0 75% 50%), hsl(0 70% 60%));
+    --gradient-hero: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(170 55% 42%) 100%);
 
-    /* Shadows - softer, more professional */
-    --shadow-card: 0 1px 3px hsl(210 40% 20% / 0.04), 0 4px 12px hsl(210 40% 20% / 0.03);
-    --shadow-card-hover: 0 4px 8px hsl(210 40% 20% / 0.06), 0 8px 24px hsl(210 40% 20% / 0.04);
-    --shadow-elevated: 0 8px 24px hsl(210 40% 20% / 0.08), 0 16px 48px hsl(210 40% 20% / 0.06);
+    /* Shadows - Softer, More Professional */
+    --shadow-card: 0 1px 3px hsl(210 40% 15% / 0.03), 0 4px 12px hsl(210 40% 15% / 0.02);
+    --shadow-card-hover: 0 4px 8px hsl(210 40% 15% / 0.05), 0 8px 24px hsl(210 40% 15% / 0.03);
+    --shadow-elevated: 0 8px 24px hsl(210 40% 15% / 0.07), 0 16px 48px hsl(210 40% 15% / 0.05);
   }
 
   .dark {

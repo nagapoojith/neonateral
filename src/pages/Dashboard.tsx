@@ -31,15 +31,15 @@ const Dashboard = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">NICU Dashboard</h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">NICU Dashboard</h1>
             <p className="text-muted-foreground mt-1">
-              Welcome back, <span className="font-medium text-foreground">{user?.name}</span>. Real-time monitoring overview.
+              Welcome back, <span className="font-semibold text-primary">{user?.name}</span>. Real-time monitoring overview.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-sm px-4 py-1.5 rounded-full border-status-normal/30 bg-status-normal-bg">
-              <div className="w-2 h-2 rounded-full bg-status-normal mr-2 animate-pulse" />
-              <span className="text-status-normal font-medium">Live Monitoring</span>
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="text-sm px-4 py-2 rounded-full border-status-normal/40 bg-status-normal-bg shadow-sm">
+              <div className="w-2.5 h-2.5 rounded-full bg-status-normal mr-2 animate-pulse" />
+              <span className="text-status-normal font-semibold">Live Monitoring</span>
             </Badge>
           </div>
         </div>
