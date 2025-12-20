@@ -1,0 +1,310 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Hospital-grade clean color palette */
+    --background: 200 20% 98%;
+    --foreground: 210 40% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 40% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 40% 20%;
+
+    /* Medical blue primary - calming and professional */
+    --primary: 200 85% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Soft gray-blue secondary */
+    --secondary: 200 20% 95%;
+    --secondary-foreground: 210 40% 30%;
+
+    --muted: 200 15% 94%;
+    --muted-foreground: 210 20% 50%;
+
+    /* Light teal accent */
+    --accent: 175 50% 94%;
+    --accent-foreground: 175 60% 30%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 200 20% 90%;
+    --input: 200 20% 90%;
+    --ring: 200 85% 45%;
+
+    --radius: 0.875rem;
+
+    /* Status colors - clear medical indicators */
+    --status-normal: 152 60% 42%;
+    --status-normal-bg: 152 60% 95%;
+    --status-warning: 38 92% 50%;
+    --status-warning-bg: 38 92% 95%;
+    --status-critical: 0 72% 51%;
+    --status-critical-bg: 0 72% 96%;
+
+    /* Chart colors - softer medical tones */
+    --chart-heart: 0 65% 55%;
+    --chart-spo2: 200 85% 50%;
+    --chart-temp: 38 85% 50%;
+    --chart-movement: 152 60% 42%;
+
+    /* Sidebar */
+    --sidebar-background: 200 25% 97%;
+    --sidebar-foreground: 210 40% 25%;
+    --sidebar-primary: 200 85% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 175 50% 94%;
+    --sidebar-accent-foreground: 175 60% 30%;
+    --sidebar-border: 200 20% 90%;
+    --sidebar-ring: 200 85% 45%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(200 85% 45%), hsl(175 60% 45%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(200 20% 98%));
+    --gradient-critical: linear-gradient(135deg, hsl(0 72% 51%), hsl(0 72% 61%));
+    --gradient-hero: linear-gradient(135deg, hsl(200 85% 45%) 0%, hsl(175 60% 42%) 100%);
+
+    /* Shadows - softer, more professional */
+    --shadow-card: 0 1px 3px hsl(210 40% 20% / 0.04), 0 4px 12px hsl(210 40% 20% / 0.03);
+    --shadow-card-hover: 0 4px 8px hsl(210 40% 20% / 0.06), 0 8px 24px hsl(210 40% 20% / 0.04);
+    --shadow-elevated: 0 8px 24px hsl(210 40% 20% / 0.08), 0 16px 48px hsl(210 40% 20% / 0.06);
+  }
+
+  .dark {
+    --background: 210 30% 8%;
+    --foreground: 200 20% 95%;
+
+    --card: 210 30% 11%;
+    --card-foreground: 200 20% 95%;
+
+    --popover: 210 30% 11%;
+    --popover-foreground: 200 20% 95%;
+
+    --primary: 200 80% 50%;
+    --primary-foreground: 210 30% 8%;
+
+    --secondary: 210 25% 16%;
+    --secondary-foreground: 200 20% 90%;
+
+    --muted: 210 25% 16%;
+    --muted-foreground: 200 15% 55%;
+
+    --accent: 175 40% 18%;
+    --accent-foreground: 175 60% 70%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 25% 18%;
+    --input: 210 25% 18%;
+    --ring: 200 80% 50%;
+
+    --status-normal-bg: 152 60% 12%;
+    --status-warning-bg: 38 92% 12%;
+    --status-critical-bg: 0 72% 12%;
+
+    --sidebar-background: 210 30% 10%;
+    --sidebar-foreground: 200 20% 90%;
+    --sidebar-primary: 200 80% 50%;
+    --sidebar-primary-foreground: 210 30% 8%;
+    --sidebar-accent: 175 40% 18%;
+    --sidebar-accent-foreground: 175 60% 70%;
+    --sidebar-border: 210 25% 18%;
+    --sidebar-ring: 200 80% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@layer components {
+  .status-normal {
+    @apply bg-status-normal-bg text-status-normal;
+  }
+
+  .status-warning {
+    @apply bg-status-warning-bg text-status-warning;
+  }
+
+  .status-critical {
+    @apply bg-status-critical-bg text-status-critical animate-pulse;
+  }
+
+  .card-medical {
+    @apply bg-card rounded-2xl border border-border/60 shadow-card transition-all duration-300;
+  }
+
+  .card-medical:hover {
+    @apply shadow-card-hover border-border;
+  }
+
+  .vital-card {
+    @apply bg-muted/40 rounded-xl border border-border/40 p-4 transition-all duration-200;
+  }
+
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  /* Medical button styles */
+  .btn-medical {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow transition-all;
+  }
+
+  .btn-medical-outline {
+    @apply border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all;
+  }
+}
+
+@layer utilities {
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .bg-status-normal {
+    background-color: hsl(var(--status-normal));
+  }
+
+  .bg-status-normal-bg {
+    background-color: hsl(var(--status-normal-bg));
+  }
+
+  .text-status-normal {
+    color: hsl(var(--status-normal));
+  }
+
+  .bg-status-warning {
+    background-color: hsl(var(--status-warning));
+  }
+
+  .bg-status-warning-bg {
+    background-color: hsl(var(--status-warning-bg));
+  }
+
+  .text-status-warning {
+    color: hsl(var(--status-warning));
+  }
+
+  .bg-status-critical {
+    background-color: hsl(var(--status-critical));
+  }
+
+  .bg-status-critical-bg {
+    background-color: hsl(var(--status-critical-bg));
+  }
+
+  .text-status-critical {
+    color: hsl(var(--status-critical));
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/15 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/25;
+}
+
+/* Animations */
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.1), transparent);
+  background-size: 200% 100%;
+}
