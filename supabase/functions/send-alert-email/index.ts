@@ -97,6 +97,13 @@ const handler = async (req: Request): Promise<Response> => {
 </html>
     `;
 
+    // Use onboarding@resend.dev as fallback if no verified domain
+    // Users should verify their own domain in Brevo for production
+    const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL") || "neoguard@resend.dev";
+    const senderName = Deno.env.get("BREVO_SENDER_NAME") || "NeoGuard Monitoring System";
+    
+    console.log(`Using sender: ${senderName} <${senderEmail}>`);
+
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
@@ -106,8 +113,8 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         sender: {
-          name: "Neonatal Monitoring System",
-          email: "noreply@neonatalmonitor.com"
+          name: senderName,
+          email: senderEmail
         },
         to: [{ email: to }],
         subject: `🚨 [${alertLabel}] Alert for ${babyName} - Bed ${bedNumber}`,
