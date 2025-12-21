@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -25,21 +23,33 @@ const getAlertColor = (type: string) => {
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("Send alert email function called");
+  console.log("=== SEND ALERT EMAIL FUNCTION STARTED ===");
+  console.log("Request method:", req.method);
   
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Get API key at runtime
+    const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
+    
+    console.log("BREVO_API_KEY configured:", BREVO_API_KEY ? "YES (length: " + BREVO_API_KEY.length + ")" : "NO");
+    
     if (!BREVO_API_KEY) {
-      console.error("BREVO_API_KEY is not configured");
-      throw new Error("Email service is not configured");
+      console.error("ERROR: BREVO_API_KEY is not configured in environment");
+      throw new Error("Email service is not configured - missing BREVO_API_KEY");
     }
 
-    const { to, babyName, bedNumber, alertType, message, timestamp }: AlertEmailRequest = await req.json();
+    const requestBody = await req.json();
+    console.log("Request body received:", JSON.stringify(requestBody));
     
-    console.log(`Sending ${alertType} alert email to ${to} for baby ${babyName}`);
+    const { to, babyName, bedNumber, alertType, message, timestamp }: AlertEmailRequest = requestBody;
+    
+    console.log(`Preparing to send ${alertType} alert email`);
+    console.log(`  Recipient: ${to}`);
+    console.log(`  Baby: ${babyName}`);
+    console.log(`  Bed: ${bedNumber}`);
 
     const alertColor = getAlertColor(alertType);
     const alertLabel = alertType.toUpperCase();
@@ -97,12 +107,28 @@ const handler = async (req: Request): Promise<Response> => {
 </html>
     `;
 
-    // Use onboarding@resend.dev as fallback if no verified domain
-    // Users should verify their own domain in Brevo for production
-    const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL") || "neoguard@resend.dev";
+    // Use the verified sender email from Brevo
+    // IMPORTANT: This email must be verified in Brevo dashboard
+    const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL") || "nagapoojithtn@gmail.com";
     const senderName = Deno.env.get("BREVO_SENDER_NAME") || "NeoGuard Monitoring System";
     
-    console.log(`Using sender: ${senderName} <${senderEmail}>`);
+    console.log(`=== SENDER CONFIGURATION ===`);
+    console.log(`  Sender Name: ${senderName}`);
+    console.log(`  Sender Email: ${senderEmail}`);
+
+    const emailPayload = {
+      sender: {
+        name: senderName,
+        email: senderEmail
+      },
+      to: [{ email: to }],
+      subject: `🚨 [${alertLabel}] Alert for ${babyName} - Bed ${bedNumber}`,
+      htmlContent,
+    };
+
+    console.log(`=== SENDING EMAIL VIA BREVO API ===`);
+    console.log(`  API URL: https://api.brevo.com/v3/smtp/email`);
+    console.log(`  Payload: ${JSON.stringify({ ...emailPayload, htmlContent: "[HTML CONTENT OMITTED]" })}`);
 
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
@@ -111,32 +137,36 @@ const handler = async (req: Request): Promise<Response> => {
         "api-key": BREVO_API_KEY,
         "content-type": "application/json",
       },
-      body: JSON.stringify({
-        sender: {
-          name: senderName,
-          email: senderEmail
-        },
-        to: [{ email: to }],
-        subject: `🚨 [${alertLabel}] Alert for ${babyName} - Bed ${bedNumber}`,
-        htmlContent,
-      }),
+      body: JSON.stringify(emailPayload),
     });
 
+    console.log(`=== BREVO API RESPONSE ===`);
+    console.log(`  Status: ${response.status}`);
+    console.log(`  Status Text: ${response.statusText}`);
+
+    const responseText = await response.text();
+    console.log(`  Response Body: ${responseText}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Brevo API error:", response.status, errorText);
-      throw new Error(`Failed to send email: ${errorText}`);
+      console.error(`ERROR: Brevo API returned ${response.status}`);
+      console.error(`Error Details: ${responseText}`);
+      throw new Error(`Failed to send email: ${responseText}`);
     }
 
-    const result = await response.json();
-    console.log("Email sent successfully:", result);
+    const result = JSON.parse(responseText);
+    console.log(`=== EMAIL SENT SUCCESSFULLY ===`);
+    console.log(`  Message ID: ${result.messageId}`);
 
     return new Response(JSON.stringify({ success: true, messageId: result.messageId }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
-    console.error("Error in send-alert-email function:", error);
+    console.error(`=== ERROR IN SEND-ALERT-EMAIL ===`);
+    console.error(`  Error Type: ${error.constructor.name}`);
+    console.error(`  Error Message: ${error.message}`);
+    console.error(`  Stack Trace: ${error.stack}`);
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       {
