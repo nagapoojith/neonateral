@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { AlertTriangle, Bell, AlertCircle, Send } from 'lucide-react';
+import { AlertTriangle, Bell, AlertCircle, Send, Sparkles, Heart, Thermometer, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ManualAlertDialogProps {
@@ -24,6 +24,13 @@ interface ManualAlertDialogProps {
 }
 
 type AlertType = 'normal' | 'high' | 'critical';
+
+interface Vitals {
+  heartRate?: number;
+  spo2?: number;
+  temperature?: number;
+  movement?: number;
+}
 
 const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
   babyId,
@@ -35,9 +42,44 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
   const [alertType, setAlertType] = useState<AlertType>('normal');
   const [reason, setReason] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [vitals, setVitals] = useState<Vitals | null>(null);
+  const [loadingVitals, setLoadingVitals] = useState(false);
 
   // Only doctors and nurses can send manual alerts
   const canSendAlert = user?.role === 'doctor' || user?.role === 'nurse' || user?.role === 'senior_doctor';
+
+  // Fetch latest vitals when dialog opens
+  useEffect(() => {
+    if (open && babyId) {
+      fetchLatestVitals();
+    }
+  }, [open, babyId]);
+
+  const fetchLatestVitals = async () => {
+    setLoadingVitals(true);
+    try {
+      const { data, error } = await supabase
+        .from('vitals')
+        .select('heart_rate, spo2, temperature, movement')
+        .eq('baby_id', babyId)
+        .order('recorded_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data && !error) {
+        setVitals({
+          heartRate: data.heart_rate,
+          spo2: data.spo2,
+          temperature: data.temperature,
+          movement: data.movement || undefined,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching vitals:', error);
+    } finally {
+      setLoadingVitals(false);
+    }
+  };
 
   if (!canSendAlert) {
     return null;
@@ -67,11 +109,10 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
 
       if (alertError) throw alertError;
 
-      // 2. Optionally trigger email notification (to the user who created it as confirmation)
-      // This uses the existing send-alert-email edge function
+      // 2. Send AI-powered email notification
       if (user?.email) {
         try {
-          await supabase.functions.invoke('send-alert-email', {
+          const { data, error } = await supabase.functions.invoke('send-alert-email', {
             body: {
               to: user.email,
               babyName,
@@ -79,15 +120,27 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
               alertType,
               message: `Manual Alert: ${reason}`,
               timestamp: new Date().toLocaleString(),
+              vitals: vitals || undefined,
             },
           });
+
+          if (error) {
+            console.error('Email notification failed:', error);
+            toast.warning('Alert created but email notification failed');
+          } else if (data?.aiGenerated) {
+            toast.success('AI-powered alert email sent successfully', {
+              description: 'Email includes AI medical assessment',
+              icon: <Sparkles className="w-4 h-4 text-primary" />,
+            });
+          } else {
+            toast.success('Alert email sent successfully');
+          }
         } catch (emailError) {
           console.error('Email notification failed:', emailError);
-          // Don't fail the whole operation if email fails
         }
       }
 
-      toast.success('Manual alert sent successfully');
+      toast.success('Manual alert created successfully');
       setOpen(false);
       setReason('');
       setAlertType('normal');
@@ -129,31 +182,70 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2 border-status-warning/30 text-status-warning hover:bg-status-warning-bg hover:text-status-warning">
+        <Button variant="outline" className="gap-2 border-status-warning/30 text-status-warning hover:bg-status-warning-bg hover:text-status-warning shadow-sm">
           <AlertTriangle className="w-4 h-4" />
           Send Manual Alert
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-status-warning" />
-            Send Manual Alert
+            <div className="p-2 rounded-xl bg-status-warning-bg">
+              <AlertTriangle className="w-5 h-5 text-status-warning" />
+            </div>
+            <div>
+              <span>Send Manual Alert</span>
+              <div className="flex items-center gap-1.5 mt-1">
+                <Sparkles className="w-3 h-3 text-primary" />
+                <span className="text-xs font-normal text-muted-foreground">AI-powered email generation</span>
+              </div>
+            </div>
           </DialogTitle>
-          <DialogDescription>
-            Send a manual alert for <span className="font-medium text-foreground">{babyName}</span> (Bed {bedNumber}).
-            This will notify the medical team.
+          <DialogDescription className="pt-2">
+            Alert for <span className="font-semibold text-foreground">{babyName}</span> • Bed {bedNumber}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-5 py-4">
+          {/* Current Vitals Display */}
+          {vitals && (
+            <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
+              <p className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5" />
+                Current Vitals (will be included in email)
+              </p>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="text-center p-2 rounded-lg bg-background">
+                  <Heart className="w-4 h-4 mx-auto text-red-500 mb-1" />
+                  <p className="text-sm font-bold text-foreground">{vitals.heartRate || '—'}</p>
+                  <p className="text-[10px] text-muted-foreground">BPM</p>
+                </div>
+                <div className="text-center p-2 rounded-lg bg-background">
+                  <div className="w-4 h-4 mx-auto text-primary mb-1 flex items-center justify-center text-xs font-bold">O₂</div>
+                  <p className="text-sm font-bold text-foreground">{vitals.spo2 || '—'}%</p>
+                  <p className="text-[10px] text-muted-foreground">SpO₂</p>
+                </div>
+                <div className="text-center p-2 rounded-lg bg-background">
+                  <Thermometer className="w-4 h-4 mx-auto text-orange-500 mb-1" />
+                  <p className="text-sm font-bold text-foreground">{vitals.temperature || '—'}°</p>
+                  <p className="text-[10px] text-muted-foreground">Temp</p>
+                </div>
+                <div className="text-center p-2 rounded-lg bg-background">
+                  <Activity className="w-4 h-4 mx-auto text-green-500 mb-1" />
+                  <p className="text-sm font-bold text-foreground">{vitals.movement || '—'}</p>
+                  <p className="text-[10px] text-muted-foreground">Move</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Alert Type Selection */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Alert Priority</Label>
             <RadioGroup
               value={alertType}
               onValueChange={(value) => setAlertType(value as AlertType)}
-              className="space-y-2"
+              className="grid grid-cols-3 gap-2"
             >
               {alertTypeOptions.map((option) => {
                 const Icon = option.icon;
@@ -161,25 +253,22 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
                   <label
                     key={option.value}
                     className={cn(
-                      'flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all',
+                      'flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all text-center',
                       alertType === option.value
-                        ? `border-current ${option.bgColor} ${option.color}`
-                        : 'border-border hover:border-muted-foreground/30'
+                        ? `border-current ${option.bgColor} ${option.color} shadow-sm`
+                        : 'border-border hover:border-muted-foreground/30 hover:bg-muted/30'
                     )}
                   >
                     <RadioGroupItem value={option.value} className="sr-only" />
-                    <div className={cn('p-2 rounded-lg', option.bgColor)}>
-                      <Icon className={cn('w-4 h-4', option.color)} />
+                    <div className={cn('p-2.5 rounded-xl', option.bgColor)}>
+                      <Icon className={cn('w-5 h-5', option.color)} />
                     </div>
-                    <div className="flex-1">
-                      <p className={cn('font-medium', alertType === option.value && option.color)}>
+                    <div>
+                      <p className={cn('font-semibold text-sm', alertType === option.value && option.color)}>
                         {option.label}
                       </p>
-                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{option.description}</p>
                     </div>
-                    {alertType === option.value && (
-                      <div className={cn('w-2 h-2 rounded-full', option.color.replace('text-', 'bg-'))} />
-                    )}
                   </label>
                 );
               })}
@@ -189,19 +278,25 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
           {/* Reason Input */}
           <div className="space-y-2">
             <Label htmlFor="reason" className="text-sm font-medium">
-              Reason for Alert
+              Alert Details
             </Label>
             <Textarea
               id="reason"
-              placeholder="Describe the reason for this alert..."
+              placeholder="Describe the clinical observations or concerns..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="min-h-[100px] resize-none"
+              className="min-h-[100px] resize-none border-border/60 focus:border-primary"
               maxLength={500}
             />
-            <p className="text-xs text-muted-foreground text-right">
-              {reason.length}/500 characters
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-primary" />
+                AI will generate medical assessment
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {reason.length}/500
+              </p>
+            </div>
           </div>
         </div>
 

@@ -1,1 +1,7 @@
 project_id = "ccnohdogovmnttrlkmex"
+
+[functions.send-alert-email]
+verify_jwt = false
+
+[functions.generate-alert-content]
+verify_jwt = false
