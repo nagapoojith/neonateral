@@ -58,6 +58,8 @@ export type Database = {
           id: string
           is_acknowledged: boolean | null
           message: string
+          trigger_reason: string | null
+          vitals_snapshot: Json | null
         }
         Insert: {
           acknowledged_at?: string | null
@@ -70,6 +72,8 @@ export type Database = {
           id?: string
           is_acknowledged?: boolean | null
           message: string
+          trigger_reason?: string | null
+          vitals_snapshot?: Json | null
         }
         Update: {
           acknowledged_at?: string | null
@@ -82,6 +86,8 @@ export type Database = {
           id?: string
           is_acknowledged?: boolean | null
           message?: string
+          trigger_reason?: string | null
+          vitals_snapshot?: Json | null
         }
         Relationships: [
           {
@@ -95,6 +101,7 @@ export type Database = {
       }
       babies: {
         Row: {
+          alerts_enabled: boolean | null
           baby_name: string
           bed_number: string
           created_at: string
@@ -107,6 +114,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          alerts_enabled?: boolean | null
           baby_name: string
           bed_number: string
           created_at?: string
@@ -119,6 +127,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          alerts_enabled?: boolean | null
           baby_name?: string
           bed_number?: string
           created_at?: string
@@ -228,6 +237,7 @@ export type Database = {
           id: string
           movement: number | null
           recorded_at: string
+          sleeping_position: string | null
           spo2: number
           temperature: number
         }
@@ -237,6 +247,7 @@ export type Database = {
           id?: string
           movement?: number | null
           recorded_at?: string
+          sleeping_position?: string | null
           spo2: number
           temperature: number
         }
@@ -246,6 +257,7 @@ export type Database = {
           id?: string
           movement?: number | null
           recorded_at?: string
+          sleeping_position?: string | null
           spo2?: number
           temperature?: number
         }
