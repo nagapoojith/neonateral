@@ -301,7 +301,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
   }, [session, fetchBabies, fetchAlerts]);
 
-  // Send automatic alert email
+  // Fetch all recipients for a baby
+  const fetchBabyRecipients = useCallback(async (babyId: string): Promise<string[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('alert_recipients')
+        .select('email')
+        .eq('baby_id', babyId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return data?.map(r => r.email) || [];
+    } catch (error) {
+      console.error('Error fetching recipients:', error);
+      return [];
+    }
+  }, []);
+
+  // Send automatic alert email to ALL recipients
   const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, level: AlertLevel, reasons: string[]) => {
     if (!alertsEnabledRef.current[baby.id]) {
       console.log(`Auto alerts disabled for baby ${baby.name}`);
@@ -339,39 +356,67 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Send email notification
-      const { error: emailError } = await supabase.functions.invoke('send-alert-email', {
-        body: {
-          to: baby.parentContact.includes('@') ? baby.parentContact : 'nrkavipriyan.cse2024@citchennai.net',
-          babyName: baby.name,
-          babyId: baby.id,
-          bedNumber: baby.bedNumber,
-          alertType: level,
-          message,
-          triggerReason,
-          timestamp: new Date().toLocaleString(),
-          vitals: {
-            heartRate: vitals.heartRate,
-            spo2: vitals.spo2,
-            temperature: vitals.temperature,
-            movement: vitals.movement,
-            sleepingPosition: vitals.sleepingPosition,
-          },
-        },
+      // Update last_alert_sent_at
+      await supabase
+        .from('babies')
+        .update({ last_alert_sent_at: new Date().toISOString() })
+        .eq('id', baby.id);
+
+      // Fetch all recipients for this baby
+      const recipients = await fetchBabyRecipients(baby.id);
+      
+      // If no recipients configured, use parent contact as fallback
+      const emailTargets = recipients.length > 0 
+        ? recipients 
+        : [baby.parentContact.includes('@') ? baby.parentContact : 'nrkavipriyan.cse2024@citchennai.net'];
+
+      // Send email to ALL recipients
+      const emailPromises = emailTargets.map(async (recipientEmail) => {
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-alert-email', {
+            body: {
+              to: recipientEmail,
+              babyName: baby.name,
+              babyId: baby.id,
+              bedNumber: baby.bedNumber,
+              alertType: level,
+              message,
+              triggerReason,
+              timestamp: new Date().toLocaleString(),
+              vitals: {
+                heartRate: vitals.heartRate,
+                spo2: vitals.spo2,
+                temperature: vitals.temperature,
+                movement: vitals.movement,
+                sleepingPosition: vitals.sleepingPosition,
+              },
+            },
+          });
+
+          if (emailError) {
+            console.error(`Error sending email to ${recipientEmail}:`, emailError);
+            return false;
+          }
+          console.log(`Auto alert email sent to ${recipientEmail} for ${baby.name}`);
+          return true;
+        } catch (error) {
+          console.error(`Error sending email to ${recipientEmail}:`, error);
+          return false;
+        }
       });
 
-      if (emailError) {
-        console.error('Error sending auto alert email:', emailError);
-      } else {
-        console.log(`Auto alert email sent for ${baby.name}`);
+      const results = await Promise.all(emailPromises);
+      const successCount = results.filter(Boolean).length;
+
+      if (successCount > 0) {
         toast.warning(`Automatic ${level} alert triggered for ${baby.name}`, {
-          description: triggerReason,
+          description: `Sent to ${successCount}/${emailTargets.length} recipient(s). ${triggerReason}`,
         });
       }
     } catch (error) {
       console.error('Error in auto alert:', error);
     }
-  }, []);
+  }, [fetchBabyRecipients]);
 
   // Update vitals every 3 seconds and check for automatic alerts
   useEffect(() => {

@@ -1,24 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useData, VitalSigns } from '@/contexts/DataContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import VitalsChart from '@/components/charts/VitalsChart';
 import ManualAlertDialog from '@/components/dashboard/ManualAlertDialog';
+import AlertControlPanel from '@/components/dashboard/AlertControlPanel';
+import DeleteBabyDialog from '@/components/dashboard/DeleteBabyDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft,
   Heart,
@@ -32,9 +23,9 @@ import {
   Bed,
   TrendingUp,
   AlertTriangle,
-  Bell,
-  BellOff,
-  Trash2,
+  Settings2,
+  BarChart3,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -78,6 +69,12 @@ const BabyDetail = () => {
       default:
         return 'normal';
     }
+  };
+
+  const getPositionStatus = (position: string): 'normal' | 'warning' | 'critical' => {
+    if (position === 'prone') return 'critical';
+    if (position === 'side') return 'warning';
+    return 'normal';
   };
 
   if (!baby) {
@@ -129,18 +126,26 @@ const BabyDetail = () => {
                 <Badge variant={statusVariant} className="text-sm">
                   {statusLabel}
                 </Badge>
+                {!baby.alertsEnabled && (
+                  <Badge variant="secondary" className="text-xs">
+                    Alerts Off
+                  </Badge>
+                )}
               </div>
               <p className="text-muted-foreground">Bed: {baby.bedNumber}</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            {/* Manual Alert Button - visible only to doctors/nurses */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Manual Alert Button */}
             <ManualAlertDialog 
               babyId={baby.id} 
               babyName={baby.name} 
               bedNumber={baby.bedNumber} 
             />
+
+            {/* Delete Button - only for doctors */}
+            <DeleteBabyDialog babyId={baby.id} babyName={baby.name} />
 
             {babyAlerts.length > 0 && (
               <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-status-critical-bg animate-pulse-soft">
@@ -155,7 +160,7 @@ const BabyDetail = () => {
 
         {/* Current Vitals */}
         {currentVitals && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
               {
                 type: 'heartRate',
@@ -237,138 +242,205 @@ const BabyDetail = () => {
                 </Card>
               );
             })}
+
+            {/* Sleeping Position Card */}
+            <Card className={cn(
+              'card-medical overflow-hidden',
+              getPositionStatus(currentVitals.sleepingPosition) === 'critical' && 'ring-2 ring-status-critical',
+              getPositionStatus(currentVitals.sleepingPosition) === 'warning' && 'ring-2 ring-status-warning'
+            )}>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={cn(
+                    'p-2.5 rounded-xl',
+                    getPositionStatus(currentVitals.sleepingPosition) === 'critical' ? 'bg-status-critical-bg' :
+                    getPositionStatus(currentVitals.sleepingPosition) === 'warning' ? 'bg-status-warning-bg' :
+                    'bg-primary/10'
+                  )}>
+                    <User className={cn(
+                      'w-5 h-5',
+                      getPositionStatus(currentVitals.sleepingPosition) === 'critical' ? 'text-status-critical' :
+                      getPositionStatus(currentVitals.sleepingPosition) === 'warning' ? 'text-status-warning' :
+                      'text-primary'
+                    )} />
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground">Position</span>
+                </div>
+                <p className={cn(
+                  'text-2xl font-bold capitalize',
+                  getPositionStatus(currentVitals.sleepingPosition) === 'critical' ? 'text-status-critical' :
+                  getPositionStatus(currentVitals.sleepingPosition) === 'warning' ? 'text-status-warning' :
+                  'text-foreground'
+                )}>
+                  {currentVitals.sleepingPosition}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">Recommended: Back</p>
+              </CardContent>
+            </Card>
           </div>
         )}
 
-        {/* Charts */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <VitalsChart
-            data={vitalsHistory}
-            type="heartRate"
-            title="Heart Rate"
-            color="hsl(var(--chart-heart))"
-            unit="bpm"
-            normalRange={{ min: 120, max: 160 }}
-          />
-          <VitalsChart
-            data={vitalsHistory}
-            type="spo2"
-            title="SpO₂ Level"
-            color="hsl(var(--chart-spo2))"
-            unit="%"
-            normalRange={{ min: 95, max: 100 }}
-          />
-          <VitalsChart
-            data={vitalsHistory}
-            type="temperature"
-            title="Body Temperature"
-            color="hsl(var(--chart-temp))"
-            unit="°C"
-            normalRange={{ min: 36.5, max: 37.5 }}
-          />
-          <VitalsChart
-            data={vitalsHistory}
-            type="movement"
-            title="Movement Activity"
-            color="hsl(var(--chart-movement))"
-            unit="%"
-          />
-        </div>
+        {/* Tabbed Content */}
+        <Tabs defaultValue="vitals" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+            <TabsTrigger value="vitals" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Vitals History
+            </TabsTrigger>
+            <TabsTrigger value="info" className="gap-2">
+              <User className="w-4 h-4" />
+              Baby Info
+            </TabsTrigger>
+            <TabsTrigger value="alerts" className="gap-2">
+              <Settings2 className="w-4 h-4" />
+              Alert Settings
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Baby Information & Behavior */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Baby Information */}
-          <Card className="card-medical">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold">Baby Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                { icon: Bed, label: 'Bed Number', value: baby.bedNumber },
-                { icon: Calendar, label: 'Date of Birth', value: baby.dateOfBirth },
-                { icon: Clock, label: 'Time of Birth', value: baby.timeOfBirth },
-                { icon: Users, label: 'Parents', value: baby.parentNames },
-                { icon: Phone, label: 'Contact', value: baby.parentContact },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div key={item.label} className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-muted">
-                      <Icon className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{item.label}</p>
-                      <p className="font-medium text-foreground">{item.value}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
+          {/* Vitals History Tab */}
+          <TabsContent value="vitals" className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <VitalsChart
+                data={vitalsHistory}
+                type="heartRate"
+                title="Heart Rate"
+                color="hsl(var(--chart-heart))"
+                unit="bpm"
+                normalRange={{ min: 120, max: 160 }}
+              />
+              <VitalsChart
+                data={vitalsHistory}
+                type="spo2"
+                title="SpO₂ Level"
+                color="hsl(var(--chart-spo2))"
+                unit="%"
+                normalRange={{ min: 95, max: 100 }}
+              />
+              <VitalsChart
+                data={vitalsHistory}
+                type="temperature"
+                title="Body Temperature"
+                color="hsl(var(--chart-temp))"
+                unit="°C"
+                normalRange={{ min: 36.5, max: 37.5 }}
+              />
+              <VitalsChart
+                data={vitalsHistory}
+                type="movement"
+                title="Movement Activity"
+                color="hsl(var(--chart-movement))"
+                unit="%"
+              />
+            </div>
+          </TabsContent>
 
-          {/* Behavior Analysis */}
-          <Card className="card-medical">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-primary/10">
-                  <TrendingUp className="w-4 h-4 text-primary" />
-                </div>
-                Behavior Analysis
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {baby.behaviorBaseline ? (
-                <>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-muted-foreground">Baseline Status</span>
-                    <Badge variant={baby.behaviorBaseline.isBaselineEstablished ? 'normal' : 'secondary'}>
-                      {baby.behaviorBaseline.isBaselineEstablished ? 'Established' : 'Learning'}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-muted-foreground">Days Tracked</span>
-                    <span className="font-medium">{baby.behaviorBaseline.daysTracked} / 4 days</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-muted-foreground">Avg Movement</span>
-                    <span className="font-medium">{baby.behaviorBaseline.avgMovement}%</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-muted-foreground">Avg Heart Rate</span>
-                    <span className="font-medium">{baby.behaviorBaseline.avgHeartRate} bpm</span>
-                  </div>
-                  
-                  {/* Sleep Pattern */}
-                  <div className="pt-4 border-t border-border">
-                    <p className="text-sm text-muted-foreground mb-3">Sleep Pattern (last 4 readings)</p>
-                    <div className="flex gap-2">
-                      {baby.behaviorBaseline.sleepPatterns.map((pattern, index) => (
-                        <div 
-                          key={index}
-                          className="flex-1 h-12 rounded-lg bg-primary/10 relative overflow-hidden"
-                        >
-                          <div 
-                            className="absolute bottom-0 left-0 right-0 bg-primary/60 transition-all rounded-b-lg"
-                            style={{ height: `${pattern}%` }}
-                          />
+          {/* Baby Info Tab */}
+          <TabsContent value="info">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Baby Information */}
+              <Card className="card-medical">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold">Baby Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[
+                    { icon: Bed, label: 'Bed Number', value: baby.bedNumber },
+                    { icon: Calendar, label: 'Date of Birth', value: baby.dateOfBirth },
+                    { icon: Clock, label: 'Time of Birth', value: baby.timeOfBirth },
+                    { icon: Users, label: 'Parents', value: baby.parentNames },
+                    { icon: Phone, label: 'Contact', value: baby.parentContact },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.label} className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-muted">
+                          <Icon className="w-4 h-4 text-muted-foreground" />
                         </div>
-                      ))}
+                        <div>
+                          <p className="text-sm text-muted-foreground">{item.label}</p>
+                          <p className="font-medium text-foreground">{item.value}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+
+              {/* Behavior Analysis */}
+              <Card className="card-medical">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-primary/10">
+                      <TrendingUp className="w-4 h-4 text-primary" />
                     </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="p-4 rounded-2xl bg-muted mb-4">
-                    <TrendingUp className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground text-center">
-                    Behavior tracking not initialized
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    Behavior Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {baby.behaviorBaseline ? (
+                    <>
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm text-muted-foreground">Baseline Status</span>
+                        <Badge variant={baby.behaviorBaseline.isBaselineEstablished ? 'normal' : 'secondary'}>
+                          {baby.behaviorBaseline.isBaselineEstablished ? 'Established' : 'Learning'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm text-muted-foreground">Days Tracked</span>
+                        <span className="font-medium">{baby.behaviorBaseline.daysTracked} / 4 days</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm text-muted-foreground">Avg Movement</span>
+                        <span className="font-medium">{baby.behaviorBaseline.avgMovement}%</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm text-muted-foreground">Avg Heart Rate</span>
+                        <span className="font-medium">{baby.behaviorBaseline.avgHeartRate} bpm</span>
+                      </div>
+                      
+                      {/* Sleep Pattern */}
+                      <div className="pt-4 border-t border-border">
+                        <p className="text-sm text-muted-foreground mb-3">Sleep Pattern (last 4 readings)</p>
+                        <div className="flex gap-2">
+                          {baby.behaviorBaseline.sleepPatterns.map((pattern, index) => (
+                            <div 
+                              key={index}
+                              className="flex-1 h-12 rounded-lg bg-primary/10 relative overflow-hidden"
+                            >
+                              <div 
+                                className="absolute bottom-0 left-0 right-0 bg-primary/60 transition-all rounded-b-lg"
+                                style={{ height: `${pattern}%` }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="p-4 rounded-2xl bg-muted mb-4">
+                        <TrendingUp className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground text-center">
+                        Behavior tracking not initialized
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Alert Settings Tab */}
+          <TabsContent value="alerts">
+            <AlertControlPanel
+              babyId={baby.id}
+              babyName={baby.name}
+              alertsEnabled={baby.alertsEnabled}
+              lastAlertSentAt={null}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

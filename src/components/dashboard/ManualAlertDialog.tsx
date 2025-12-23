@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { AlertTriangle, Bell, AlertCircle, Send, Sparkles, Heart, Thermometer, Activity } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertTriangle, Bell, AlertCircle, Send, Sparkles, Heart, Thermometer, Activity, Users, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ManualAlertDialogProps {
@@ -30,6 +31,13 @@ interface Vitals {
   spo2?: number;
   temperature?: number;
   movement?: number;
+  sleepingPosition?: string;
+}
+
+interface Recipient {
+  id: string;
+  email: string;
+  recipient_name: string | null;
 }
 
 const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
@@ -44,14 +52,18 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [vitals, setVitals] = useState<Vitals | null>(null);
   const [loadingVitals, setLoadingVitals] = useState(false);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [sendToAll, setSendToAll] = useState(true);
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
 
   // Only doctors and nurses can send manual alerts
   const canSendAlert = user?.role === 'doctor' || user?.role === 'nurse' || user?.role === 'senior_doctor';
 
-  // Fetch latest vitals when dialog opens
+  // Fetch latest vitals and recipients when dialog opens
   useEffect(() => {
     if (open && babyId) {
       fetchLatestVitals();
+      fetchRecipients();
     }
   }, [open, babyId]);
 
@@ -60,11 +72,11 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
     try {
       const { data, error } = await supabase
         .from('vitals')
-        .select('heart_rate, spo2, temperature, movement')
+        .select('heart_rate, spo2, temperature, movement, sleeping_position')
         .eq('baby_id', babyId)
         .order('recorded_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (data && !error) {
         setVitals({
@@ -72,6 +84,7 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
           spo2: data.spo2,
           temperature: data.temperature,
           movement: data.movement || undefined,
+          sleepingPosition: data.sleeping_position || 'back',
         });
       }
     } catch (error) {
@@ -81,13 +94,55 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
     }
   };
 
+  const fetchRecipients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('alert_recipients')
+        .select('id, email, recipient_name')
+        .eq('baby_id', babyId)
+        .eq('is_active', true);
+
+      if (data && !error) {
+        setRecipients(data);
+        setSelectedRecipients(data.map(r => r.email));
+      }
+    } catch (error) {
+      console.error('Error fetching recipients:', error);
+    }
+  };
+
   if (!canSendAlert) {
     return null;
   }
 
+  const handleRecipientToggle = (email: string) => {
+    setSelectedRecipients(prev => 
+      prev.includes(email) 
+        ? prev.filter(e => e !== email)
+        : [...prev, email]
+    );
+  };
+
   const handleSendAlert = async () => {
     if (!reason.trim()) {
       toast.error('Please enter a reason for the alert');
+      return;
+    }
+
+    // Determine which emails to send to
+    let emailTargets: string[] = [];
+    if (sendToAll) {
+      emailTargets = recipients.length > 0 
+        ? recipients.map(r => r.email)
+        : (user?.email ? [user.email] : []);
+    } else {
+      emailTargets = selectedRecipients.length > 0 
+        ? selectedRecipients 
+        : (user?.email ? [user.email] : []);
+    }
+
+    if (emailTargets.length === 0) {
+      toast.error('No recipients available. Please add recipients in Alert Settings.');
       return;
     }
 
@@ -101,43 +156,55 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
           baby_id: babyId,
           alert_type: alertType,
           message: `Manual Alert: ${reason}`,
+          trigger_reason: reason,
           is_acknowledged: false,
           escalation_level: 0,
+          vitals_snapshot: vitals as any,
         })
         .select()
         .single();
 
       if (alertError) throw alertError;
 
-      // 2. Send AI-powered email notification
-      if (user?.email) {
+      // 2. Send email to all selected recipients
+      const emailPromises = emailTargets.map(async (recipientEmail) => {
         try {
-          const { data, error } = await supabase.functions.invoke('send-alert-email', {
+          const { error } = await supabase.functions.invoke('send-alert-email', {
             body: {
-              to: user.email,
+              to: recipientEmail,
               babyName,
+              babyId,
               bedNumber,
               alertType,
               message: `Manual Alert: ${reason}`,
+              triggerReason: reason,
               timestamp: new Date().toLocaleString(),
               vitals: vitals || undefined,
             },
           });
 
           if (error) {
-            console.error('Email notification failed:', error);
-            toast.warning('Alert created but email notification failed');
-          } else if (data?.aiGenerated) {
-            toast.success('AI-powered alert email sent successfully', {
-              description: 'Email includes AI medical assessment',
-              icon: <Sparkles className="w-4 h-4 text-primary" />,
-            });
-          } else {
-            toast.success('Alert email sent successfully');
+            console.error(`Email to ${recipientEmail} failed:`, error);
+            return { email: recipientEmail, success: false };
           }
+          return { email: recipientEmail, success: true };
         } catch (emailError) {
-          console.error('Email notification failed:', emailError);
+          console.error(`Email to ${recipientEmail} failed:`, emailError);
+          return { email: recipientEmail, success: false };
         }
+      });
+
+      const results = await Promise.all(emailPromises);
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+
+      if (successCount > 0) {
+        toast.success(`Alert sent to ${successCount} recipient(s)`, {
+          description: failCount > 0 ? `${failCount} email(s) failed` : 'All emails sent successfully',
+          icon: <Sparkles className="w-4 h-4 text-primary" />,
+        });
+      } else if (failCount > 0) {
+        toast.warning('Alert created but emails failed to send');
       }
 
       toast.success('Manual alert created successfully');
@@ -187,7 +254,7 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
           Send Manual Alert
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-status-warning-bg">
@@ -214,7 +281,7 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
                 <Activity className="w-3.5 h-3.5" />
                 Current Vitals (will be included in email)
               </p>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-5 gap-2">
                 <div className="text-center p-2 rounded-lg bg-background">
                   <Heart className="w-4 h-4 mx-auto text-red-500 mb-1" />
                   <p className="text-sm font-bold text-foreground">{vitals.heartRate || '—'}</p>
@@ -234,6 +301,11 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
                   <Activity className="w-4 h-4 mx-auto text-green-500 mb-1" />
                   <p className="text-sm font-bold text-foreground">{vitals.movement || '—'}</p>
                   <p className="text-[10px] text-muted-foreground">Move</p>
+                </div>
+                <div className="text-center p-2 rounded-lg bg-background">
+                  <div className="w-4 h-4 mx-auto text-primary mb-1 flex items-center justify-center text-[10px] font-bold">🛏️</div>
+                  <p className="text-sm font-bold text-foreground capitalize">{vitals.sleepingPosition || 'back'}</p>
+                  <p className="text-[10px] text-muted-foreground">Pos</p>
                 </div>
               </div>
             </div>
@@ -297,6 +369,59 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
                 {reason.length}/500
               </p>
             </div>
+          </div>
+
+          {/* Recipients Section */}
+          <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border/50">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email Recipients
+              </Label>
+              <span className="text-xs text-muted-foreground">
+                {recipients.length > 0 ? `${recipients.length} configured` : 'None configured'}
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="sendToAll"
+                checked={sendToAll}
+                onCheckedChange={(checked) => setSendToAll(checked as boolean)}
+              />
+              <label
+                htmlFor="sendToAll"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Send to all recipients
+              </label>
+            </div>
+
+            {!sendToAll && recipients.length > 0 && (
+              <div className="space-y-2 pl-6">
+                {recipients.map((recipient) => (
+                  <div key={recipient.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={recipient.id}
+                      checked={selectedRecipients.includes(recipient.email)}
+                      onCheckedChange={() => handleRecipientToggle(recipient.email)}
+                    />
+                    <label
+                      htmlFor={recipient.id}
+                      className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {recipient.email}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {recipients.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No recipients configured. Add recipients in Alert Settings tab. Alert will be sent to your email.
+              </p>
+            )}
           </div>
         </div>
 

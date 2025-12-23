@@ -46,6 +46,44 @@ export type Database = {
           },
         ]
       }
+      alert_recipients: {
+        Row: {
+          baby_id: string
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          recipient_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          baby_id: string
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          recipient_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          baby_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          recipient_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_recipients_baby_id_fkey"
+            columns: ["baby_id"]
+            isOneToOne: false
+            referencedRelation: "babies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alerts: {
         Row: {
           acknowledged_at: string | null
@@ -107,6 +145,7 @@ export type Database = {
           created_at: string
           date_of_birth: string
           id: string
+          last_alert_sent_at: string | null
           parent_contact: string
           parent_names: string
           registered_by: string | null
@@ -120,6 +159,7 @@ export type Database = {
           created_at?: string
           date_of_birth: string
           id?: string
+          last_alert_sent_at?: string | null
           parent_contact: string
           parent_names: string
           registered_by?: string | null
@@ -133,6 +173,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string
           id?: string
+          last_alert_sent_at?: string | null
           parent_contact?: string
           parent_names?: string
           registered_by?: string | null

@@ -4,7 +4,7 @@ import { Baby, VitalSigns } from '@/types';
 import { useData } from '@/contexts/DataContext';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Heart, Thermometer, Wind, Activity, ChevronRight } from 'lucide-react';
+import { Heart, Thermometer, Wind, Activity, ChevronRight, Bell, BellOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BabyCardProps {
@@ -69,9 +69,17 @@ const BabyCard: React.FC<BabyCardProps> = ({ baby }) => {
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
-                {baby.name}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
+                  {baby.name}
+                </h3>
+                {/* Alert Status Indicator */}
+                {baby.alertsEnabled ? (
+                  <Bell className="w-3.5 h-3.5 text-status-normal" />
+                ) : (
+                  <BellOff className="w-3.5 h-3.5 text-muted-foreground" />
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">Bed: {baby.bedNumber}</p>
             </div>
             <div className="flex items-center gap-2">
