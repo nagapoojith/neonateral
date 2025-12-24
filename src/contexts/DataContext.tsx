@@ -36,6 +36,7 @@ export interface Baby {
   registeredAt: string;
   behaviorBaseline: BehaviorBaseline;
   alertsEnabled: boolean;
+  lastAlertSentAt?: string | null;
 }
 
 export interface Alert {
@@ -193,6 +194,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           registeredBy: baby.registered_by || '',
           registeredAt: baby.created_at,
           alertsEnabled,
+          lastAlertSentAt: baby.last_alert_sent_at || null,
           behaviorBaseline: {
             avgMovement: 45,
             avgHeartRate: 140,

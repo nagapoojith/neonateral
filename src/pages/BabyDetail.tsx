@@ -51,7 +51,6 @@ const BabyDetail = () => {
     return () => clearInterval(interval);
   }, [id, getVitalsHistory, getCurrentVitals]);
 
-  // Helper function to determine vital status color
   const getVitalStatus = (type: string, value: number): 'normal' | 'warning' | 'critical' => {
     switch (type) {
       case 'heartRate':
@@ -112,7 +111,6 @@ const BabyDetail = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link to="/dashboard">
@@ -137,16 +135,12 @@ const BabyDetail = () => {
           </div>
           
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Manual Alert Button */}
             <ManualAlertDialog 
               babyId={baby.id} 
               babyName={baby.name} 
               bedNumber={baby.bedNumber} 
             />
-
-            {/* Delete Button - only for doctors */}
             <DeleteBabyDialog babyId={baby.id} babyName={baby.name} />
-
             {babyAlerts.length > 0 && (
               <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-status-critical-bg animate-pulse-soft">
                 <AlertTriangle className="w-5 h-5 text-status-critical" />
@@ -158,7 +152,6 @@ const BabyDetail = () => {
           </div>
         </div>
 
-        {/* Current Vitals */}
         {currentVitals && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
@@ -243,7 +236,6 @@ const BabyDetail = () => {
               );
             })}
 
-            {/* Sleeping Position Card */}
             <Card className={cn(
               'card-medical overflow-hidden',
               getPositionStatus(currentVitals.sleepingPosition) === 'critical' && 'ring-2 ring-status-critical',
@@ -280,7 +272,6 @@ const BabyDetail = () => {
           </div>
         )}
 
-        {/* Tabbed Content */}
         <Tabs defaultValue="vitals" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
             <TabsTrigger value="vitals" className="gap-2">
@@ -297,7 +288,6 @@ const BabyDetail = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Vitals History Tab */}
           <TabsContent value="vitals" className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <VitalsChart
@@ -334,10 +324,8 @@ const BabyDetail = () => {
             </div>
           </TabsContent>
 
-          {/* Baby Info Tab */}
           <TabsContent value="info">
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Baby Information */}
               <Card className="card-medical">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg font-semibold">Baby Information</CardTitle>
@@ -366,7 +354,6 @@ const BabyDetail = () => {
                 </CardContent>
               </Card>
 
-              {/* Behavior Analysis */}
               <Card className="card-medical">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -398,7 +385,6 @@ const BabyDetail = () => {
                         <span className="font-medium">{baby.behaviorBaseline.avgHeartRate} bpm</span>
                       </div>
                       
-                      {/* Sleep Pattern */}
                       <div className="pt-4 border-t border-border">
                         <p className="text-sm text-muted-foreground mb-3">Sleep Pattern (last 4 readings)</p>
                         <div className="flex gap-2">
@@ -431,13 +417,12 @@ const BabyDetail = () => {
             </div>
           </TabsContent>
 
-          {/* Alert Settings Tab */}
           <TabsContent value="alerts">
             <AlertControlPanel
               babyId={baby.id}
               babyName={baby.name}
               alertsEnabled={baby.alertsEnabled}
-              lastAlertSentAt={null}
+              lastAlertSentAt={baby.lastAlertSentAt}
             />
           </TabsContent>
         </Tabs>

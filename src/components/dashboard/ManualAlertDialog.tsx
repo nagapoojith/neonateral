@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertTriangle, Bell, AlertCircle, Send, Sparkles, Heart, Thermometer, Activity, Users, Mail } from 'lucide-react';
+import { AlertTriangle, Bell, AlertCircle, Send, Sparkles, Heart, Thermometer, Activity, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ManualAlertDialogProps {
@@ -56,10 +56,8 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
   const [sendToAll, setSendToAll] = useState(true);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
 
-  // Only doctors and nurses can send manual alerts
   const canSendAlert = user?.role === 'doctor' || user?.role === 'nurse' || user?.role === 'senior_doctor';
 
-  // Fetch latest vitals and recipients when dialog opens
   useEffect(() => {
     if (open && babyId) {
       fetchLatestVitals();
@@ -129,7 +127,6 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
       return;
     }
 
-    // Determine which emails to send to
     let emailTargets: string[] = [];
     if (sendToAll) {
       emailTargets = recipients.length > 0 
@@ -149,7 +146,6 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
     setIsSending(true);
 
     try {
-      // 1. Insert alert into database
       const { data: alertData, error: alertError } = await supabase
         .from('alerts')
         .insert({
@@ -166,7 +162,6 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
 
       if (alertError) throw alertError;
 
-      // 2. Send email to all selected recipients
       const emailPromises = emailTargets.map(async (recipientEmail) => {
         try {
           const { error } = await supabase.functions.invoke('send-alert-email', {
@@ -274,7 +269,6 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-5 py-4">
-          {/* Current Vitals Display */}
           {vitals && (
             <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
               <p className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
@@ -311,7 +305,6 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
             </div>
           )}
 
-          {/* Alert Type Selection */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Alert Priority</Label>
             <RadioGroup
@@ -347,7 +340,6 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
             </RadioGroup>
           </div>
 
-          {/* Reason Input */}
           <div className="space-y-2">
             <Label htmlFor="reason" className="text-sm font-medium">
               Alert Details
@@ -371,7 +363,6 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
             </div>
           </div>
 
-          {/* Recipients Section */}
           <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border/50">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium flex items-center gap-2">

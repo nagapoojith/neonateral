@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Baby, VitalSigns } from '@/types';
-import { useData } from '@/contexts/DataContext';
+import { useData, Baby, VitalSigns } from '@/contexts/DataContext';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Heart, Thermometer, Wind, Activity, ChevronRight, Bell, BellOff } from 'lucide-react';
+import { Heart, Thermometer, Wind, Activity, ChevronRight, Bell, BellOff, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
 
 interface BabyCardProps {
   baby: Baby;
@@ -19,7 +19,6 @@ const BabyCard: React.FC<BabyCardProps> = ({ baby }) => {
     const updateVitals = () => {
       setVitals(getCurrentVitals(baby.id));
     };
-    
     updateVitals();
     const interval = setInterval(updateVitals, 3000);
     return () => clearInterval(interval);
@@ -37,7 +36,6 @@ const BabyCard: React.FC<BabyCardProps> = ({ baby }) => {
     ? 'High Priority' 
     : 'Normal';
 
-  // Helper to get vital status
   const getVitalColor = (type: string, value: number) => {
     switch (type) {
       case 'heartRate':
@@ -137,7 +135,6 @@ const BabyCard: React.FC<BabyCardProps> = ({ baby }) => {
             </div>
           )}
 
-          {/* Behavior baseline indicator */}
           {baby.behaviorBaseline && (
             <div className="mt-4 pt-4 border-t border-border/50">
               <div className="flex items-center justify-between text-xs">
