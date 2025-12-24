@@ -17,7 +17,6 @@ import { formatDistanceToNow, format } from 'date-fns';
 const AlertHistory = () => {
   const { alerts } = useData();
 
-  // Sort alerts by timestamp (newest first)
   const sortedAlerts = [...alerts].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
@@ -47,7 +46,6 @@ const AlertHistory = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
             <History className="w-7 h-7" />
@@ -58,7 +56,6 @@ const AlertHistory = () => {
           </p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="card-medical">
             <CardContent className="p-4">
@@ -86,13 +83,12 @@ const AlertHistory = () => {
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">Response Rate</p>
               <p className="text-2xl font-bold text-status-normal">
-                {Math.round((alerts.filter((a) => a.acknowledged).length / alerts.length) * 100)}%
+                {alerts.length > 0 ? Math.round((alerts.filter((a) => a.acknowledged).length / alerts.length) * 100) : 0}%
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Alert Table */}
         <Card className="card-medical overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">All Alerts</CardTitle>
@@ -161,7 +157,6 @@ const AlertHistory = () => {
           </CardContent>
         </Card>
 
-        {/* Accountability Log */}
         <Card className="card-medical">
           <CardHeader>
             <CardTitle className="text-lg">Escalation & Accountability Log</CardTitle>

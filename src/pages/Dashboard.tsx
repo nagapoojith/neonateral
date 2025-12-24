@@ -34,7 +34,6 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">NICU Dashboard</h1>
@@ -54,7 +53,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="card-medical overflow-hidden">
             <CardContent className="p-5">
@@ -113,9 +111,7 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Main content grid */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Baby Cards - 2 columns */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground">Monitored Patients</h2>
@@ -130,11 +126,9 @@ const Dashboard = () => {
               ))}
             </div>
 
-            {/* Behavior Comparison */}
             <BehaviorComparison babies={babies} />
           </div>
 
-          {/* Recent Alerts - 1 column */}
           <div className="space-y-4">
             <Card className="card-medical">
               <CardHeader className="pb-4">
@@ -166,7 +160,6 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Quick Info */}
             <Card className="card-medical">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-semibold">System Status</CardTitle>

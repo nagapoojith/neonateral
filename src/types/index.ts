@@ -22,6 +22,8 @@ export interface Baby {
   registeredBy: string;
   registeredAt: string;
   behaviorBaseline?: BehaviorBaseline;
+  alertsEnabled: boolean;
+  lastAlertSentAt?: string | null;
 }
 
 export interface VitalSigns {

@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import {
   Bell,
   BellOff,
@@ -159,7 +158,6 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Alert Toggle Section */}
       <Card className="card-medical overflow-hidden">
         <div className={cn(
           'absolute inset-x-0 top-0 h-1',
@@ -221,7 +219,6 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
             </div>
           </div>
 
-          {/* Last Alert Info */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="w-4 h-4" />
             <span>Last alert sent: {formatLastAlertTime()}</span>
@@ -229,7 +226,6 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
         </CardContent>
       </Card>
 
-      {/* Email Recipients Section */}
       <Card className="card-medical">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-3">
@@ -245,7 +241,6 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Current Recipients */}
           {recipients.length > 0 && (
             <div className="space-y-3">
               <Label className="text-sm font-medium flex items-center gap-2">
@@ -293,7 +288,6 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
             </div>
           )}
 
-          {/* Add New Recipients */}
           <div className="space-y-4">
             <Label className="text-sm font-medium flex items-center gap-2">
               <Plus className="w-4 h-4" />
@@ -327,7 +321,6 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
             </Button>
           </div>
 
-          {/* Info */}
           <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
             <p className="text-xs text-muted-foreground">
               <strong>Note:</strong> When automatic alerts are enabled, all recipients listed above 
