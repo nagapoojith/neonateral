@@ -13,18 +13,18 @@ import BabyDetail from "./pages/BabyDetail";
 import RegisterBaby from "./pages/RegisterBaby";
 import Alerts from "./pages/Alerts";
 import AlertHistory from "./pages/AlertHistory";
+import Documentation from "./pages/Documentation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-medical-light">
-        <div className="w-8 h-8 border-4 border-medical-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -36,14 +36,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Public Route Component (redirect if authenticated)
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-medical-light">
-        <div className="w-8 h-8 border-4 border-medical-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -112,6 +111,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <AlertHistory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/documentation"
+        element={
+          <ProtectedRoute>
+            <Documentation />
           </ProtectedRoute>
         }
       />
