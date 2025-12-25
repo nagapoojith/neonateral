@@ -15,7 +15,6 @@ import {
   X,
   User,
   ChevronDown,
-  FileText,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -36,7 +35,6 @@ const navItems = [
   { path: '/register', label: 'Register Baby', icon: Baby, doctorOnly: true },
   { path: '/alerts', label: 'Alerts', icon: Bell },
   { path: '/history', label: 'Alert History', icon: History },
-  { path: '/documentation', label: 'Documentation', icon: FileText },
 ];
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {

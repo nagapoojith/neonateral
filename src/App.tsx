@@ -13,7 +13,6 @@ import BabyDetail from "./pages/BabyDetail";
 import RegisterBaby from "./pages/RegisterBaby";
 import Alerts from "./pages/Alerts";
 import AlertHistory from "./pages/AlertHistory";
-import Documentation from "./pages/Documentation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -111,14 +110,6 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <AlertHistory />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/documentation"
-        element={
-          <ProtectedRoute>
-            <Documentation />
           </ProtectedRoute>
         }
       />
