@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface AlertEmailRequest {
   to: string;
+  mobileNumbers?: string[];
   babyName: string;
   babyId?: string;
   bedNumber: string;
@@ -494,6 +495,79 @@ function generatePremiumEmailHTML(
   `;
 }
 
+async function sendSMSAlert(
+  mobileNumber: string,
+  babyName: string,
+  bedNumber: string,
+  alertType: string,
+  triggerReason: string,
+  vitals: AlertEmailRequest['vitals'],
+  apiKey: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const formattedNumber = mobileNumber.replace(/\D/g, '').slice(-10);
+    
+    if (formattedNumber.length !== 10) {
+      console.log(`Invalid mobile number format: ${mobileNumber}`);
+      return { success: false, error: 'Invalid mobile number format' };
+    }
+
+    const alertEmoji = alertType === 'critical' ? '🚨' : alertType === 'high' ? '⚠️' : 'ℹ️';
+    const severity = alertType.toUpperCase();
+    
+    let smsMessage = `${alertEmoji} ${severity} NICU ALERT\n`;
+    smsMessage += `Patient: ${babyName}\n`;
+    smsMessage += `Bed: ${bedNumber}\n`;
+    smsMessage += `Reason: ${triggerReason}\n`;
+    
+    if (vitals) {
+      smsMessage += `HR: ${vitals.heartRate ?? 'N/A'} BPM | `;
+      smsMessage += `SpO2: ${vitals.spo2 ?? 'N/A'}% | `;
+      smsMessage += `Temp: ${vitals.temperature ?? 'N/A'}°C\n`;
+      smsMessage += `Position: ${vitals.sleepingPosition || 'Unknown'}`;
+    }
+    
+    smsMessage += `\n- NeoGuard NICU`;
+
+    console.log(`Sending SMS to ${formattedNumber}`);
+    console.log(`SMS Message: ${smsMessage}`);
+
+    const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+      method: 'POST',
+      headers: {
+        'authorization': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        route: 'q',
+        message: smsMessage,
+        language: 'english',
+        flash: 0,
+        numbers: formattedNumber,
+      }),
+    });
+
+    const responseText = await response.text();
+    console.log(`Fast2SMS Response: ${responseText}`);
+
+    if (!response.ok) {
+      return { success: false, error: `SMS API error: ${response.status}` };
+    }
+
+    const result = JSON.parse(responseText);
+    
+    if (result.return === true) {
+      console.log(`SMS sent successfully to ${formattedNumber}`);
+      return { success: true };
+    } else {
+      return { success: false, error: result.message || 'SMS sending failed' };
+    }
+  } catch (error: any) {
+    console.error(`Error sending SMS to ${mobileNumber}:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("=== SEND ALERT EMAIL FUNCTION STARTED ===");
   console.log("Request method:", req.method);
@@ -505,9 +579,11 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const FAST2SMS_API_KEY = Deno.env.get("FAST2SMS_API_KEY");
     
     console.log("BREVO_API_KEY configured:", BREVO_API_KEY ? "YES (length: " + BREVO_API_KEY.length + ")" : "NO");
     console.log("LOVABLE_API_KEY configured:", LOVABLE_API_KEY ? "YES" : "NO");
+    console.log("FAST2SMS_API_KEY configured:", FAST2SMS_API_KEY ? "YES" : "NO");
     
     if (!BREVO_API_KEY) {
       console.error("ERROR: BREVO_API_KEY is not configured");
@@ -517,7 +593,7 @@ const handler = async (req: Request): Promise<Response> => {
     const requestBody: AlertEmailRequest = await req.json();
     console.log("Request body received:", JSON.stringify(requestBody, null, 2));
     
-    const { to, babyName, babyId, bedNumber, alertType, message, triggerReason, timestamp, vitals } = requestBody;
+    const { to, mobileNumbers, babyName, babyId, bedNumber, alertType, message, triggerReason, timestamp, vitals } = requestBody;
     
     if (!babyName || !bedNumber || !alertType || !timestamp) {
       console.error("Missing required fields in request");
@@ -526,6 +602,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log(`Preparing to send ${alertType} alert email`);
     console.log(`  Recipient: ${to}`);
+    console.log(`  Mobile Numbers: ${mobileNumbers?.join(', ') || 'None'}`);
     console.log(`  Baby: ${babyName} (ID: ${babyId || 'N/A'})`);
     console.log(`  Bed: ${bedNumber}`);
     console.log(`  Trigger Reason: ${triggerReason || message}`);
@@ -598,16 +675,44 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`Failed to send email: ${emailResponse.status} - ${responseBody}`);
     }
 
-    const result = JSON.parse(responseBody);
+    const emailResult = JSON.parse(responseBody);
     console.log("=== EMAIL SENT SUCCESSFULLY ===");
-    console.log(`  Message ID: ${result.messageId}`);
+    console.log(`  Message ID: ${emailResult.messageId}`);
+
+    let smsResults: { number: string; success: boolean; error?: string }[] = [];
+    
+    if (FAST2SMS_API_KEY && mobileNumbers && mobileNumbers.length > 0) {
+      console.log("=== SENDING SMS ALERTS ===");
+      
+      const smsPromises = mobileNumbers.map(async (number) => {
+        const result = await sendSMSAlert(
+          number,
+          babyName,
+          bedNumber,
+          alertType,
+          triggerReason || message,
+          vitals,
+          FAST2SMS_API_KEY
+        );
+        return { number, ...result };
+      });
+      
+      smsResults = await Promise.all(smsPromises);
+      
+      const successfulSMS = smsResults.filter(r => r.success).length;
+      console.log(`SMS Alerts: ${successfulSMS}/${mobileNumbers.length} sent successfully`);
+    } else if (!FAST2SMS_API_KEY && mobileNumbers && mobileNumbers.length > 0) {
+      console.log("SMS alerts requested but FAST2SMS_API_KEY not configured");
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        messageId: result.messageId,
+        messageId: emailResult.messageId,
+        smsResults,
         details: {
           recipient: to,
+          mobileNumbers: mobileNumbers || [],
           babyName,
           alertType,
           triggerReason: triggerReason || message,
