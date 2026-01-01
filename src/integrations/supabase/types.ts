@@ -53,6 +53,7 @@ export type Database = {
           email: string
           id: string
           is_active: boolean
+          mobile_number: string | null
           recipient_name: string | null
           updated_at: string
         }
@@ -62,6 +63,7 @@ export type Database = {
           email: string
           id?: string
           is_active?: boolean
+          mobile_number?: string | null
           recipient_name?: string | null
           updated_at?: string
         }
@@ -71,6 +73,7 @@ export type Database = {
           email?: string
           id?: string
           is_active?: boolean
+          mobile_number?: string | null
           recipient_name?: string | null
           updated_at?: string
         }

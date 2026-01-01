@@ -303,24 +303,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
   }, [session, fetchBabies, fetchAlerts]);
 
-  // Fetch all recipients for a baby
-  const fetchBabyRecipients = useCallback(async (babyId: string): Promise<string[]> => {
+  const fetchBabyRecipients = useCallback(async (babyId: string): Promise<{ emails: string[]; mobileNumbers: string[] }> => {
     try {
       const { data, error } = await supabase
         .from('alert_recipients')
-        .select('email')
+        .select('email, mobile_number')
         .eq('baby_id', babyId)
         .eq('is_active', true);
 
       if (error) throw error;
-      return data?.map(r => r.email) || [];
+      
+      const emails = data?.map(r => r.email).filter(e => e && !e.includes('@placeholder.local')) || [];
+      const mobileNumbers = data?.map(r => r.mobile_number).filter((m): m is string => !!m) || [];
+      
+      return { emails, mobileNumbers };
     } catch (error) {
       console.error('Error fetching recipients:', error);
-      return [];
+      return { emails: [], mobileNumbers: [] };
     }
   }, []);
 
-  // Send automatic alert email to ALL recipients
   const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, level: AlertLevel, reasons: string[]) => {
     if (!alertsEnabledRef.current[baby.id]) {
       console.log(`Auto alerts disabled for baby ${baby.name}`);
@@ -340,7 +342,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const message = `AUTOMATIC ALERT: ${triggerReason}`;
 
     try {
-      // Save alert to database with vitals snapshot
       const { data: alertData, error: alertError } = await supabase
         .from('alerts')
         .insert({
@@ -358,26 +359,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Update last_alert_sent_at
       await supabase
         .from('babies')
         .update({ last_alert_sent_at: new Date().toISOString() })
         .eq('id', baby.id);
 
-      // Fetch all recipients for this baby
-      const recipients = await fetchBabyRecipients(baby.id);
+      const { emails, mobileNumbers } = await fetchBabyRecipients(baby.id);
       
-      // If no recipients configured, use parent contact as fallback
-      const emailTargets = recipients.length > 0 
-        ? recipients 
+      const emailTargets = emails.length > 0 
+        ? emails 
         : [baby.parentContact.includes('@') ? baby.parentContact : 'nrkavipriyan.cse2024@citchennai.net'];
 
-      // Send email to ALL recipients
       const emailPromises = emailTargets.map(async (recipientEmail) => {
         try {
           const { error: emailError } = await supabase.functions.invoke('send-alert-email', {
             body: {
               to: recipientEmail,
+              mobileNumbers: mobileNumbers,
               babyName: baby.name,
               babyId: baby.id,
               bedNumber: baby.bedNumber,
@@ -396,13 +394,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
           });
 
           if (emailError) {
-            console.error(`Error sending email to ${recipientEmail}:`, emailError);
+            console.error(`Error sending alert to ${recipientEmail}:`, emailError);
             return false;
           }
-          console.log(`Auto alert email sent to ${recipientEmail} for ${baby.name}`);
+          console.log(`Auto alert sent to ${recipientEmail} for ${baby.name}`);
           return true;
         } catch (error) {
-          console.error(`Error sending email to ${recipientEmail}:`, error);
+          console.error(`Error sending alert to ${recipientEmail}:`, error);
           return false;
         }
       });
@@ -411,8 +409,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const successCount = results.filter(Boolean).length;
 
       if (successCount > 0) {
+        const smsInfo = mobileNumbers.length > 0 ? ` + ${mobileNumbers.length} SMS` : '';
         toast.warning(`Automatic ${level} alert triggered for ${baby.name}`, {
-          description: `Sent to ${successCount}/${emailTargets.length} recipient(s). ${triggerReason}`,
+          description: `Sent to ${successCount} email(s)${smsInfo}. ${triggerReason}`,
         });
       }
     } catch (error) {

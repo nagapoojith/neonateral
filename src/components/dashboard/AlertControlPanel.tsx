@@ -17,12 +17,14 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
+  Phone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AlertRecipient {
   id: string;
   email: string;
+  mobile_number: string | null;
   recipient_name: string | null;
   is_active: boolean;
 }
@@ -43,7 +45,13 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
   const { toggleBabyAlerts } = useData();
   const [alertsEnabled, setAlertsEnabled] = useState(initialAlertsEnabled);
   const [recipients, setRecipients] = useState<AlertRecipient[]>([]);
-  const [newEmails, setNewEmails] = useState<string[]>(['', '', '', '', '']);
+  const [newRecipients, setNewRecipients] = useState<{ email: string; mobile: string }[]>([
+    { email: '', mobile: '' },
+    { email: '', mobile: '' },
+    { email: '', mobile: '' },
+    { email: '', mobile: '' },
+    { email: '', mobile: '' },
+  ]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -82,8 +90,8 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
       await toggleBabyAlerts(babyId, newValue);
       toast.success(
         newValue 
-          ? 'Automatic alerts enabled - emails will be sent when vitals are abnormal' 
-          : 'Automatic alerts disabled - no automatic emails will be sent'
+          ? 'Automatic alerts enabled - emails and SMS will be sent when vitals are abnormal' 
+          : 'Automatic alerts disabled - no automatic notifications will be sent'
       );
     } catch (error) {
       setAlertsEnabled(!newValue);
@@ -92,32 +100,42 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
   };
 
   const handleAddRecipients = async () => {
-    const validEmails = newEmails.filter(email => {
-      const trimmed = email.trim();
-      return trimmed && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+    const validRecipients = newRecipients.filter(r => {
+      const trimmedEmail = r.email.trim();
+      const trimmedMobile = r.mobile.trim();
+      const isEmailValid = trimmedEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+      const isMobileValid = trimmedMobile && /^[6-9]\d{9}$/.test(trimmedMobile.replace(/\D/g, ''));
+      return isEmailValid || isMobileValid;
     });
 
-    if (validEmails.length === 0) {
-      toast.error('Please enter at least one valid email address');
+    if (validRecipients.length === 0) {
+      toast.error('Please enter at least one valid email address or 10-digit Indian mobile number');
       return;
     }
 
     setIsSaving(true);
     try {
-      const insertData = validEmails.map(email => ({
+      const insertData = validRecipients.map(r => ({
         baby_id: babyId,
-        email: email.trim().toLowerCase(),
+        email: r.email.trim().toLowerCase() || `sms-only-${Date.now()}@placeholder.local`,
+        mobile_number: r.mobile.trim().replace(/\D/g, '') || null,
         is_active: true,
       }));
 
       const { error } = await supabase
         .from('alert_recipients')
-        .upsert(insertData, { onConflict: 'baby_id,email' });
+        .insert(insertData);
 
       if (error) throw error;
 
-      toast.success(`${validEmails.length} recipient(s) added successfully`);
-      setNewEmails(['', '', '', '', '']);
+      toast.success(`${validRecipients.length} recipient(s) added successfully`);
+      setNewRecipients([
+        { email: '', mobile: '' },
+        { email: '', mobile: '' },
+        { email: '', mobile: '' },
+        { email: '', mobile: '' },
+        { email: '', mobile: '' },
+      ]);
       fetchRecipients();
     } catch (error: any) {
       console.error('Error adding recipients:', error);
@@ -136,7 +154,7 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
 
       if (error) throw error;
 
-      toast.success(`Removed ${email} from recipients`);
+      toast.success(`Removed recipient`);
       fetchRecipients();
     } catch (error) {
       console.error('Error removing recipient:', error);
@@ -144,10 +162,10 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
     }
   };
 
-  const handleEmailChange = (index: number, value: string) => {
-    const updated = [...newEmails];
-    updated[index] = value;
-    setNewEmails(updated);
+  const handleRecipientChange = (index: number, field: 'email' | 'mobile', value: string) => {
+    const updated = [...newRecipients];
+    updated[index] = { ...updated[index], [field]: value };
+    setNewRecipients(updated);
   };
 
   const formatLastAlertTime = () => {
@@ -212,8 +230,8 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {alertsEnabled 
-                    ? 'Email alerts will be sent automatically when vitals go outside safe ranges.'
-                    : 'No automatic email alerts will be sent. UI monitoring continues normally.'}
+                    ? 'Email and SMS alerts will be sent automatically when vitals go outside safe ranges.'
+                    : 'No automatic email or SMS alerts will be sent. UI monitoring continues normally.'}
                 </p>
               </div>
             </div>
@@ -235,7 +253,7 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
             <div>
               <span className="text-lg font-semibold">Alert Recipients</span>
               <p className="text-sm font-normal text-muted-foreground mt-0.5">
-                Manage who receives alert emails
+                Manage who receives email and SMS alerts
               </p>
             </div>
           </CardTitle>
@@ -258,7 +276,13 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
                         <Mail className="w-4 h-4 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{recipient.email}</p>
+                        <p className="font-medium text-sm">{recipient.email.includes('@placeholder.local') ? 'SMS Only' : recipient.email}</p>
+                        {recipient.mobile_number && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            +91 {recipient.mobile_number}
+                          </p>
+                        )}
                         {recipient.recipient_name && (
                           <p className="text-xs text-muted-foreground">{recipient.recipient_name}</p>
                         )}
@@ -283,7 +307,7 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
               <AlertTriangle className="w-8 h-8 text-status-warning mx-auto mb-2" />
               <p className="font-medium text-status-warning">No Recipients Configured</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Add email addresses below to receive alerts
+                Add email addresses and mobile numbers below to receive alerts
               </p>
             </div>
           )}
@@ -293,21 +317,42 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
               <Plus className="w-4 h-4" />
               Add New Recipients (up to 5)
             </Label>
-            <div className="grid gap-3">
-              {newEmails.map((email, index) => (
-                <Input
-                  key={index}
-                  type="email"
-                  placeholder={`Email address ${index + 1} (e.g., nurse${index + 1}@hospital.com)`}
-                  value={email}
-                  onChange={(e) => handleEmailChange(index, e.target.value)}
-                  className="bg-background"
-                />
+            <div className="space-y-4">
+              {newRecipients.map((recipient, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Mail className="w-3 h-3" />
+                      Email Address
+                    </Label>
+                    <Input
+                      type="email"
+                      placeholder={`doctor${index + 1}@hospital.com`}
+                      value={recipient.email}
+                      onChange={(e) => handleRecipientChange(index, 'email', e.target.value)}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Phone className="w-3 h-3" />
+                      Mobile Number (10-digit)
+                    </Label>
+                    <Input
+                      type="tel"
+                      placeholder="9876543210"
+                      value={recipient.mobile}
+                      onChange={(e) => handleRecipientChange(index, 'mobile', e.target.value)}
+                      className="bg-background"
+                      maxLength={10}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
             <Button
               onClick={handleAddRecipients}
-              disabled={isSaving || !newEmails.some(e => e.trim())}
+              disabled={isSaving || !newRecipients.some(r => r.email.trim() || r.mobile.trim())}
               className="w-full gap-2 btn-medical"
             >
               {isSaving ? (
@@ -324,8 +369,8 @@ const AlertControlPanel: React.FC<AlertControlPanelProps> = ({
           <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
             <p className="text-xs text-muted-foreground">
               <strong>Note:</strong> When automatic alerts are enabled, all recipients listed above 
-              will receive email notifications when vital signs go outside safe ranges. 
-              Manual alerts can also be sent to all recipients.
+              will receive email and SMS notifications when vital signs go outside safe ranges. 
+              SMS alerts are sent to Indian mobile numbers via Fast2SMS.
             </p>
           </div>
         </CardContent>
