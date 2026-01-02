@@ -26,6 +26,7 @@ import {
   Settings2,
   BarChart3,
   User,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -80,13 +81,13 @@ const BabyDetail = () => {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
-          <div className="p-6 rounded-2xl bg-muted/50 mb-6">
+          <div className="p-6 rounded-3xl bg-muted/50 mb-6">
             <AlertTriangle className="w-12 h-12 text-muted-foreground" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">Baby not found</h2>
-          <p className="text-muted-foreground mb-6">The requested baby record does not exist.</p>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Patient not found</h2>
+          <p className="text-muted-foreground mb-6">The requested patient record does not exist.</p>
           <Link to="/dashboard">
-            <Button variant="default" className="gap-2">
+            <Button className="gap-2 btn-medical rounded-xl h-11">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
             </Button>
@@ -96,41 +97,51 @@ const BabyDetail = () => {
     );
   }
 
-  const statusVariant = baby.status === 'critical' 
-    ? 'critical' 
-    : baby.status === 'high' 
-    ? 'warning' 
-    : 'normal';
+  const statusConfig = {
+    critical: { variant: 'critical' as const, label: 'Critical' },
+    high: { variant: 'warning' as const, label: 'High Priority' },
+    normal: { variant: 'normal' as const, label: 'Stable' }
+  };
 
-  const statusLabel = baby.status === 'critical' 
-    ? 'Critical' 
-    : baby.status === 'high' 
-    ? 'High Priority' 
-    : 'Normal';
+  const status = statusConfig[baby.status as keyof typeof statusConfig] || statusConfig.normal;
 
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link to="/dashboard">
-              <Button variant="ghost" size="icon" className="rounded-xl hover:bg-muted">
+              <Button variant="ghost" size="icon" className="rounded-xl hover:bg-muted h-11 w-11">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-foreground">{baby.name}</h1>
-                <Badge variant={statusVariant} className="text-sm">
-                  {statusLabel}
-                </Badge>
-                {!baby.alertsEnabled && (
-                  <Badge variant="secondary" className="text-xs">
-                    Alerts Off
-                  </Badge>
-                )}
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                'w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg',
+                baby.status === 'critical' ? 'bg-status-critical' :
+                baby.status === 'high' ? 'bg-status-warning' : 'gradient-primary'
+              )}>
+                <span className="text-2xl font-bold text-primary-foreground">
+                  {baby.name.charAt(0).toUpperCase()}
+                </span>
               </div>
-              <p className="text-muted-foreground">Bed: {baby.bedNumber}</p>
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-2xl font-bold text-foreground">{baby.name}</h1>
+                  <Badge variant={status.variant} className="font-semibold shadow-sm">
+                    {status.label}
+                  </Badge>
+                  {!baby.alertsEnabled && (
+                    <Badge variant="secondary" className="text-xs">
+                      Alerts Disabled
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-1 text-muted-foreground">
+                  <Bed className="w-4 h-4" />
+                  <span className="text-sm font-medium">Bed {baby.bedNumber}</span>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -142,9 +153,9 @@ const BabyDetail = () => {
             />
             <DeleteBabyDialog babyId={baby.id} babyName={baby.name} />
             {babyAlerts.length > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-status-critical-bg animate-pulse-soft">
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-status-critical-bg border border-status-critical/30 alert-pulse">
                 <AlertTriangle className="w-5 h-5 text-status-critical" />
-                <span className="font-medium text-status-critical">
+                <span className="font-bold text-status-critical">
                   {babyAlerts.length} Active Alert{babyAlerts.length !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -153,7 +164,7 @@ const BabyDetail = () => {
         </div>
 
         {currentVitals && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {[
               {
                 type: 'heartRate',
@@ -162,7 +173,8 @@ const BabyDetail = () => {
                 unit: 'bpm',
                 normal: '120-160 bpm',
                 icon: Heart,
-                color: 'chart-heart',
+                colorClass: 'text-chart-heart',
+                bgClass: 'bg-chart-heart/10',
               },
               {
                 type: 'spo2',
@@ -171,7 +183,8 @@ const BabyDetail = () => {
                 unit: '%',
                 normal: '95-100%',
                 icon: Wind,
-                color: 'chart-spo2',
+                colorClass: 'text-chart-spo2',
+                bgClass: 'bg-chart-spo2/10',
               },
               {
                 type: 'temperature',
@@ -180,7 +193,8 @@ const BabyDetail = () => {
                 unit: '°C',
                 normal: '36.5-37.5°C',
                 icon: Thermometer,
-                color: 'chart-temp',
+                colorClass: 'text-chart-temp',
+                bgClass: 'bg-chart-temp/10',
               },
               {
                 type: 'movement',
@@ -189,100 +203,105 @@ const BabyDetail = () => {
                 unit: '%',
                 normal: 'Activity level',
                 icon: Activity,
-                color: 'chart-movement',
+                colorClass: 'text-chart-movement',
+                bgClass: 'bg-chart-movement/10',
               },
             ].map((vital) => {
               const Icon = vital.icon;
-              const status = getVitalStatus(vital.type, vital.value);
+              const vitalStatus = getVitalStatus(vital.type, vital.value);
               
               return (
                 <Card 
                   key={vital.type}
                   className={cn(
-                    'card-medical overflow-hidden',
-                    status === 'critical' && 'ring-2 ring-status-critical',
-                    status === 'warning' && 'ring-2 ring-status-warning'
+                    'card-medical overflow-hidden relative',
+                    vitalStatus === 'critical' && 'ring-2 ring-status-critical alert-pulse',
+                    vitalStatus === 'warning' && 'ring-2 ring-status-warning'
                   )}
                 >
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-3 mb-3">
+                  <div className={cn(
+                    'absolute top-0 left-0 right-0 h-1',
+                    vitalStatus === 'critical' ? 'bg-status-critical' :
+                    vitalStatus === 'warning' ? 'bg-status-warning' : 'gradient-primary'
+                  )} />
+                  <CardContent className="p-5 pt-6">
+                    <div className="flex items-center gap-3 mb-4">
                       <div className={cn(
-                        'p-2.5 rounded-xl',
-                        status === 'critical' ? 'bg-status-critical-bg' :
-                        status === 'warning' ? 'bg-status-warning-bg' :
-                        `bg-${vital.color}/10`
+                        'p-3 rounded-xl shadow-sm',
+                        vitalStatus === 'critical' ? 'bg-status-critical-bg' :
+                        vitalStatus === 'warning' ? 'bg-status-warning-bg' : vital.bgClass
                       )}>
                         <Icon className={cn(
                           'w-5 h-5',
-                          status === 'critical' ? 'text-status-critical' :
-                          status === 'warning' ? 'text-status-warning' :
-                          `text-${vital.color}`
+                          vitalStatus === 'critical' ? 'text-status-critical' :
+                          vitalStatus === 'warning' ? 'text-status-warning' : vital.colorClass
                         )} />
                       </div>
-                      <span className="text-sm font-medium text-muted-foreground">{vital.label}</span>
+                      <span className="text-sm font-semibold text-muted-foreground">{vital.label}</span>
                     </div>
                     <p className={cn(
-                      'text-3xl font-bold',
-                      status === 'critical' ? 'text-status-critical' :
-                      status === 'warning' ? 'text-status-warning' :
-                      'text-foreground'
+                      'text-4xl font-bold tabular-nums',
+                      vitalStatus === 'critical' ? 'text-status-critical' :
+                      vitalStatus === 'warning' ? 'text-status-warning' : 'text-foreground'
                     )}>
                       {vital.value}
-                      <span className="text-sm font-normal text-muted-foreground ml-1">{vital.unit}</span>
+                      <span className="text-sm font-medium text-muted-foreground ml-1">{vital.unit}</span>
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2">Normal: {vital.normal}</p>
+                    <p className="text-xs text-muted-foreground mt-2 font-medium">Normal: {vital.normal}</p>
                   </CardContent>
                 </Card>
               );
             })}
 
             <Card className={cn(
-              'card-medical overflow-hidden',
-              getPositionStatus(currentVitals.sleepingPosition) === 'critical' && 'ring-2 ring-status-critical',
+              'card-medical overflow-hidden relative',
+              getPositionStatus(currentVitals.sleepingPosition) === 'critical' && 'ring-2 ring-status-critical alert-pulse',
               getPositionStatus(currentVitals.sleepingPosition) === 'warning' && 'ring-2 ring-status-warning'
             )}>
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-3">
+              <div className={cn(
+                'absolute top-0 left-0 right-0 h-1',
+                getPositionStatus(currentVitals.sleepingPosition) === 'critical' ? 'bg-status-critical' :
+                getPositionStatus(currentVitals.sleepingPosition) === 'warning' ? 'bg-status-warning' : 'gradient-primary'
+              )} />
+              <CardContent className="p-5 pt-6">
+                <div className="flex items-center gap-3 mb-4">
                   <div className={cn(
-                    'p-2.5 rounded-xl',
+                    'p-3 rounded-xl shadow-sm',
                     getPositionStatus(currentVitals.sleepingPosition) === 'critical' ? 'bg-status-critical-bg' :
-                    getPositionStatus(currentVitals.sleepingPosition) === 'warning' ? 'bg-status-warning-bg' :
-                    'bg-primary/10'
+                    getPositionStatus(currentVitals.sleepingPosition) === 'warning' ? 'bg-status-warning-bg' : 'bg-primary/10'
                   )}>
                     <User className={cn(
                       'w-5 h-5',
                       getPositionStatus(currentVitals.sleepingPosition) === 'critical' ? 'text-status-critical' :
-                      getPositionStatus(currentVitals.sleepingPosition) === 'warning' ? 'text-status-warning' :
-                      'text-primary'
+                      getPositionStatus(currentVitals.sleepingPosition) === 'warning' ? 'text-status-warning' : 'text-primary'
                     )} />
                   </div>
-                  <span className="text-sm font-medium text-muted-foreground">Position</span>
+                  <span className="text-sm font-semibold text-muted-foreground">Position</span>
                 </div>
                 <p className={cn(
-                  'text-2xl font-bold capitalize',
+                  'text-3xl font-bold capitalize',
                   getPositionStatus(currentVitals.sleepingPosition) === 'critical' ? 'text-status-critical' :
-                  getPositionStatus(currentVitals.sleepingPosition) === 'warning' ? 'text-status-warning' :
-                  'text-foreground'
+                  getPositionStatus(currentVitals.sleepingPosition) === 'warning' ? 'text-status-warning' : 'text-foreground'
                 )}>
                   {currentVitals.sleepingPosition}
                 </p>
-                <p className="text-xs text-muted-foreground mt-2">Recommended: Back</p>
+                <p className="text-xs text-muted-foreground mt-2 font-medium">Recommended: Back</p>
               </CardContent>
             </Card>
           </div>
         )}
 
         <Tabs defaultValue="vitals" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
-            <TabsTrigger value="vitals" className="gap-2">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="vitals" className="gap-2 rounded-lg font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <BarChart3 className="w-4 h-4" />
               Vitals History
             </TabsTrigger>
-            <TabsTrigger value="info" className="gap-2">
+            <TabsTrigger value="info" className="gap-2 rounded-lg font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <User className="w-4 h-4" />
-              Baby Info
+              Patient Info
             </TabsTrigger>
-            <TabsTrigger value="alerts" className="gap-2">
+            <TabsTrigger value="alerts" className="gap-2 rounded-lg font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Settings2 className="w-4 h-4" />
               Alert Settings
             </TabsTrigger>
@@ -326,11 +345,16 @@ const BabyDetail = () => {
 
           <TabsContent value="info">
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className="card-medical">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-semibold">Baby Information</CardTitle>
+              <Card className="card-medical overflow-hidden">
+                <CardHeader className="pb-4 border-b border-border/50">
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-primary/10">
+                      <User className="w-4 h-4 text-primary" />
+                    </div>
+                    Patient Information
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-4 space-y-4">
                   {[
                     { icon: Bed, label: 'Bed Number', value: baby.bedNumber },
                     { icon: Calendar, label: 'Date of Birth', value: baby.dateOfBirth },
@@ -340,13 +364,13 @@ const BabyDetail = () => {
                   ].map((item) => {
                     const Icon = item.icon;
                     return (
-                      <div key={item.label} className="flex items-center gap-3">
+                      <div key={item.label} className="flex items-center gap-4 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                         <div className="p-2.5 rounded-xl bg-muted">
                           <Icon className="w-4 h-4 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">{item.label}</p>
-                          <p className="font-medium text-foreground">{item.value}</p>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{item.label}</p>
+                          <p className="font-semibold text-foreground">{item.value}</p>
                         </div>
                       </div>
                     );
@@ -354,47 +378,47 @@ const BabyDetail = () => {
                 </CardContent>
               </Card>
 
-              <Card className="card-medical">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Card className="card-medical overflow-hidden">
+                <CardHeader className="pb-4 border-b border-border/50">
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-primary/10">
                       <TrendingUp className="w-4 h-4 text-primary" />
                     </div>
                     Behavior Analysis
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-4 space-y-4">
                   {baby.behaviorBaseline ? (
                     <>
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-sm text-muted-foreground">Baseline Status</span>
-                        <Badge variant={baby.behaviorBaseline.isBaselineEstablished ? 'normal' : 'secondary'}>
-                          {baby.behaviorBaseline.isBaselineEstablished ? 'Established' : 'Learning'}
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                        <span className="text-sm font-medium text-muted-foreground">Baseline Status</span>
+                        <Badge variant={baby.behaviorBaseline.isBaselineEstablished ? 'normal' : 'secondary'} className="font-semibold">
+                          {baby.behaviorBaseline.isBaselineEstablished ? '✓ Established' : 'Learning...'}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-sm text-muted-foreground">Days Tracked</span>
-                        <span className="font-medium">{baby.behaviorBaseline.daysTracked} / 4 days</span>
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                        <span className="text-sm font-medium text-muted-foreground">Days Tracked</span>
+                        <span className="font-bold text-foreground">{baby.behaviorBaseline.daysTracked} / 4 days</span>
                       </div>
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-sm text-muted-foreground">Avg Movement</span>
-                        <span className="font-medium">{baby.behaviorBaseline.avgMovement}%</span>
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                        <span className="text-sm font-medium text-muted-foreground">Avg Movement</span>
+                        <span className="font-bold text-foreground">{baby.behaviorBaseline.avgMovement}%</span>
                       </div>
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-sm text-muted-foreground">Avg Heart Rate</span>
-                        <span className="font-medium">{baby.behaviorBaseline.avgHeartRate} bpm</span>
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                        <span className="text-sm font-medium text-muted-foreground">Avg Heart Rate</span>
+                        <span className="font-bold text-foreground">{baby.behaviorBaseline.avgHeartRate} bpm</span>
                       </div>
                       
-                      <div className="pt-4 border-t border-border">
-                        <p className="text-sm text-muted-foreground mb-3">Sleep Pattern (last 4 readings)</p>
+                      <div className="pt-4 border-t border-border/50">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Sleep Pattern</p>
                         <div className="flex gap-2">
                           {baby.behaviorBaseline.sleepPatterns.map((pattern, index) => (
                             <div 
                               key={index}
-                              className="flex-1 h-12 rounded-lg bg-primary/10 relative overflow-hidden"
+                              className="flex-1 h-16 rounded-xl bg-primary/10 relative overflow-hidden"
                             >
                               <div 
-                                className="absolute bottom-0 left-0 right-0 bg-primary/60 transition-all rounded-b-lg"
+                                className="absolute bottom-0 left-0 right-0 gradient-primary transition-all rounded-b-xl"
                                 style={{ height: `${pattern}%` }}
                               />
                             </div>
@@ -404,11 +428,12 @@ const BabyDetail = () => {
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12">
-                      <div className="p-4 rounded-2xl bg-muted mb-4">
-                        <TrendingUp className="w-8 h-8 text-muted-foreground" />
+                      <div className="p-5 rounded-2xl bg-muted mb-4">
+                        <TrendingUp className="w-10 h-10 text-muted-foreground" />
                       </div>
-                      <p className="text-muted-foreground text-center">
-                        Behavior tracking not initialized
+                      <p className="text-sm font-semibold text-foreground">Not Initialized</p>
+                      <p className="text-xs text-muted-foreground text-center mt-1">
+                        Behavior tracking will begin shortly
                       </p>
                     </div>
                   )}
