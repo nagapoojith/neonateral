@@ -7,7 +7,7 @@ import AlertCard from '@/components/dashboard/AlertCard';
 import BehaviorComparison from '@/components/charts/BehaviorComparison';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Baby, AlertCircle, Activity, Heart, CheckCircle2, Clock, Shield } from 'lucide-react';
+import { Baby, AlertCircle, Activity, Heart, CheckCircle2, Shield, TrendingUp, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -25,87 +25,81 @@ const Dashboard = () => {
     .filter((a) => !a.acknowledged)
     .slice(0, 5);
 
-  const currentTime = new Date().toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: true 
-  });
-
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+      <div className="space-y-8 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">NICU Dashboard</h1>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">NICU Dashboard</h1>
             <p className="text-muted-foreground mt-1">
               Welcome back, <span className="font-semibold text-primary">{user?.name}</span>
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="text-sm px-3 py-1.5 rounded-lg border-muted-foreground/20 bg-card shadow-sm">
-              <Clock className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-              <span className="text-muted-foreground">{currentTime}</span>
-            </Badge>
-            <Badge variant="outline" className="text-sm px-3 py-1.5 rounded-lg border-status-normal/40 bg-status-normal-bg shadow-sm">
-              <div className="w-2 h-2 rounded-full bg-status-normal mr-2 animate-pulse" />
-              <span className="text-status-normal font-semibold">Live</span>
-            </Badge>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/50 border border-border/50">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">{stats.total} Patients</span>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="card-medical overflow-hidden">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Babies</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{stats.total}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="stat-card group">
+            <CardContent className="p-0">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-2xl gradient-primary shadow-lg group-hover:shadow-xl transition-shadow">
+                    <Baby className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <TrendingUp className="w-5 h-5 text-status-normal opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <div className="p-3 rounded-2xl bg-primary/10">
-                  <Baby className="w-6 h-6 text-primary" />
-                </div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Total Patients</p>
+                <p className="text-4xl font-bold text-foreground">{stats.total}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="card-medical overflow-hidden">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Normal</p>
-                  <p className="text-3xl font-bold text-status-normal mt-1">{stats.normal}</p>
+          <Card className="stat-card group">
+            <CardContent className="p-0">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-2xl bg-status-normal shadow-lg group-hover:shadow-xl transition-shadow">
+                    <Heart className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <Badge variant="normal" className="text-xs font-bold">Stable</Badge>
                 </div>
-                <div className="p-3 rounded-2xl bg-status-normal-bg">
-                  <Heart className="w-6 h-6 text-status-normal" />
-                </div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Normal</p>
+                <p className="text-4xl font-bold text-status-normal">{stats.normal}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="card-medical overflow-hidden">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">High Priority</p>
-                  <p className="text-3xl font-bold text-status-warning mt-1">{stats.high}</p>
+          <Card className="stat-card group">
+            <CardContent className="p-0">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-2xl bg-status-warning shadow-lg group-hover:shadow-xl transition-shadow">
+                    <Activity className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <Badge variant="warning" className="text-xs font-bold">Monitor</Badge>
                 </div>
-                <div className="p-3 rounded-2xl bg-status-warning-bg">
-                  <Activity className="w-6 h-6 text-status-warning" />
-                </div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">High Priority</p>
+                <p className="text-4xl font-bold text-status-warning">{stats.high}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="card-medical overflow-hidden">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Critical</p>
-                  <p className="text-3xl font-bold text-status-critical mt-1">{stats.critical}</p>
+          <Card className="stat-card group">
+            <CardContent className="p-0">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-2xl bg-status-critical shadow-lg group-hover:shadow-xl transition-shadow">
+                    <AlertCircle className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <Badge variant="critical" className="text-xs font-bold animate-pulse">Alert</Badge>
                 </div>
-                <div className="p-3 rounded-2xl bg-status-critical-bg">
-                  <AlertCircle className="w-6 h-6 text-status-critical" />
-                </div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Critical</p>
+                <p className="text-4xl font-bold text-status-critical">{stats.critical}</p>
               </div>
             </CardContent>
           </Card>
@@ -114,66 +108,95 @@ const Dashboard = () => {
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Monitored Patients</h2>
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-status-normal" />
-                <span className="text-xs text-muted-foreground">Auto-refresh 3s</span>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Monitored Patients</h2>
+                <p className="text-sm text-muted-foreground">Real-time vital signs monitoring</p>
+              </div>
+              <div className="live-indicator">
+                <span>Auto-refresh 3s</span>
               </div>
             </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {babies.map((baby) => (
-                <BabyCard key={baby.id} baby={baby} />
-              ))}
-            </div>
+            
+            {babies.length > 0 ? (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {babies.map((baby) => (
+                  <BabyCard key={baby.id} baby={baby} />
+                ))}
+              </div>
+            ) : (
+              <Card className="card-medical">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <div className="p-4 rounded-2xl bg-muted mb-4">
+                    <Baby className="w-10 h-10 text-muted-foreground" />
+                  </div>
+                  <p className="text-lg font-semibold text-foreground mb-1">No patients registered</p>
+                  <p className="text-sm text-muted-foreground">Register a new patient to begin monitoring</p>
+                </CardContent>
+              </Card>
+            )}
 
-            <BehaviorComparison babies={babies} />
+            {babies.length > 0 && <BehaviorComparison babies={babies} />}
           </div>
 
-          <div className="space-y-4">
-            <Card className="card-medical">
-              <CardHeader className="pb-4">
+          <div className="space-y-6">
+            <Card className="card-medical overflow-hidden">
+              <CardHeader className="pb-4 border-b border-border/50">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">Recent Alerts</CardTitle>
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-status-critical/10">
+                      <AlertCircle className="w-4 h-4 text-status-critical" />
+                    </div>
+                    Recent Alerts
+                  </CardTitle>
                   <Link 
                     to="/alerts" 
-                    className="text-sm text-primary font-medium hover:underline"
+                    className="text-sm text-primary font-semibold hover:underline"
                   >
-                    View all
+                    View all →
                   </Link>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="p-4 space-y-3">
                 {recentAlerts.length > 0 ? (
                   recentAlerts.map((alert) => (
                     <AlertCard key={alert.id} alert={alert} compact />
                   ))
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-8">
-                    <div className="p-3 rounded-2xl bg-status-normal-bg mb-3">
-                      <CheckCircle2 className="w-6 h-6 text-status-normal" />
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <div className="p-4 rounded-2xl bg-status-normal-bg mb-3">
+                      <CheckCircle2 className="w-8 h-8 text-status-normal" />
                     </div>
-                    <p className="text-sm text-muted-foreground text-center">
-                      No pending alerts
+                    <p className="text-sm font-semibold text-foreground">All Clear</p>
+                    <p className="text-xs text-muted-foreground text-center mt-1">
+                      No pending alerts at this time
                     </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="card-medical">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">System Status</CardTitle>
+            <Card className="card-medical overflow-hidden">
+              <CardHeader className="pb-4 border-b border-border/50">
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <Shield className="w-4 h-4 text-primary" />
+                  </div>
+                  System Status
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="p-4 space-y-3">
                 {[
-                  { label: 'Monitoring Status', value: 'Active', variant: 'normal' as const },
-                  { label: 'Alert Escalation', value: 'Enabled', variant: 'normal' as const },
-                  { label: 'Behavior Tracking', value: 'Running', variant: 'normal' as const },
-                  { label: 'Scheduled Checks', value: '1hr / 30min', variant: 'secondary' as const },
+                  { label: 'Monitoring Status', value: 'Active', status: 'normal' as const },
+                  { label: 'Alert Escalation', value: 'Enabled', status: 'normal' as const },
+                  { label: 'Email Notifications', value: 'Connected', status: 'normal' as const },
+                  { label: 'SMS Alerts', value: 'Ready', status: 'normal' as const },
                 ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between py-1">
-                    <span className="text-sm text-muted-foreground">{item.label}</span>
-                    <Badge variant={item.variant}>{item.value}</Badge>
+                  <div key={item.label} className="flex items-center justify-between py-2 px-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <span className="text-sm font-medium text-muted-foreground">{item.label}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-status-normal animate-pulse" />
+                      <span className="text-sm font-semibold text-status-normal">{item.value}</span>
+                    </div>
                   </div>
                 ))}
               </CardContent>
