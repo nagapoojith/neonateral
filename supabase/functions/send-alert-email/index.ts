@@ -8,7 +8,6 @@ const corsHeaders = {
 
 interface AlertEmailRequest {
   to: string;
-  mobileNumbers?: string[];
   babyName: string;
   babyId?: string;
   bedNumber: string;
@@ -361,8 +360,8 @@ function generatePremiumEmailHTML(
                             <span style="font-size: 24px;">💨</span>
                           </td>
                           <td style="padding-left: 12px;" valign="middle">
-                            <p style="color: #64748b; margin: 0; font-size: 12px; font-weight: 500;">Oxygen Saturation (SpO₂)</p>
-                            <p style="color: ${spo2Status.color}; margin: 4px 0 0 0; font-size: 22px; font-weight: 700;">${spo2 ?? '—'} <span style="font-size: 14px; font-weight: 400; color: #94a3b8;">%</span></p>
+                            <p style="color: #64748b; margin: 0; font-size: 12px; font-weight: 500;">Oxygen Saturation</p>
+                            <p style="color: ${spo2Status.color}; margin: 4px 0 0 0; font-size: 22px; font-weight: 700;">${spo2 ?? '—'}<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">%</span></p>
                           </td>
                           <td style="text-align: right;" valign="middle">
                             <p style="color: #94a3b8; margin: 0; font-size: 11px;">Normal: 95-100%</p>
@@ -374,7 +373,7 @@ function generatePremiumEmailHTML(
                   </tr>
                   
                   <tr>
-                    <td style="background-color: #fff7ed; border-radius: 8px; padding: 12px 16px;">
+                    <td style="background-color: #fefce8; border-radius: 8px; padding: 12px 16px;">
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td width="40" valign="middle">
@@ -382,7 +381,7 @@ function generatePremiumEmailHTML(
                           </td>
                           <td style="padding-left: 12px;" valign="middle">
                             <p style="color: #64748b; margin: 0; font-size: 12px; font-weight: 500;">Body Temperature</p>
-                            <p style="color: ${tempStatus.color}; margin: 4px 0 0 0; font-size: 22px; font-weight: 700;">${temperature ?? '—'} <span style="font-size: 14px; font-weight: 400; color: #94a3b8;">°C</span></p>
+                            <p style="color: ${tempStatus.color}; margin: 4px 0 0 0; font-size: 22px; font-weight: 700;">${temperature ?? '—'}<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">°C</span></p>
                           </td>
                           <td style="text-align: right;" valign="middle">
                             <p style="color: #94a3b8; margin: 0; font-size: 11px;">Normal: 36.5-37.5°C</p>
@@ -394,7 +393,7 @@ function generatePremiumEmailHTML(
                   </tr>
                   
                   <tr>
-                    <td style="background-color: #f0fdf4; border-radius: 8px; padding: 12px 16px;">
+                    <td style="background-color: #f5f3ff; border-radius: 8px; padding: 12px 16px;">
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td width="40" valign="middle">
@@ -405,16 +404,15 @@ function generatePremiumEmailHTML(
                             <p style="color: ${positionColor}; margin: 4px 0 0 0; font-size: 16px; font-weight: 700;">${positionLabel}</p>
                           </td>
                           <td style="text-align: right;" valign="middle">
-                            <p style="color: #94a3b8; margin: 0; font-size: 11px;">Safe: Supine (Back)</p>
+                            <p style="color: #94a3b8; margin: 0; font-size: 11px;">Safe: Back</p>
                           </td>
                         </tr>
                       </table>
                     </td>
                   </tr>
                   
-                  ${movement !== undefined ? `
                   <tr>
-                    <td style="background-color: #faf5ff; border-radius: 8px; padding: 12px 16px;">
+                    <td style="background-color: #ecfdf5; border-radius: 8px; padding: 12px 16px;">
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td width="40" valign="middle">
@@ -422,7 +420,7 @@ function generatePremiumEmailHTML(
                           </td>
                           <td style="padding-left: 12px;" valign="middle">
                             <p style="color: #64748b; margin: 0; font-size: 12px; font-weight: 500;">Movement Index</p>
-                            <p style="color: #7c3aed; margin: 4px 0 0 0; font-size: 22px; font-weight: 700;">${movement} <span style="font-size: 14px; font-weight: 400; color: #94a3b8;">%</span></p>
+                            <p style="color: #0f172a; margin: 4px 0 0 0; font-size: 22px; font-weight: 700;">${movement ?? '—'}<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">%</span></p>
                           </td>
                           <td style="text-align: right;" valign="middle">
                             <p style="color: #94a3b8; margin: 0; font-size: 11px;">Activity Level</p>
@@ -431,7 +429,6 @@ function generatePremiumEmailHTML(
                       </table>
                     </td>
                   </tr>
-                  ` : ''}
                 </table>
               </div>
             </td>
@@ -439,10 +436,11 @@ function generatePremiumEmailHTML(
 
           <tr>
             <td style="padding: 24px 28px 0;">
-              <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border-left: 4px solid #0ea5e9;">
-                <p style="color: #0369a1; margin: 0 0 12px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
-                  🧠 AI CLINICAL ASSESSMENT
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+                <p style="color: #475569; margin: 0 0 12px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                  🔬 CLINICAL ANALYSIS
                 </p>
+                <h3 style="color: #0f172a; margin: 0 0 12px 0; font-size: 18px; font-weight: 700;">${content.title}</h3>
                 <p style="color: #334155; margin: 0; font-size: 15px; line-height: 1.7;">${content.medicalExplanation}</p>
               </div>
             </td>
@@ -450,37 +448,27 @@ function generatePremiumEmailHTML(
 
           <tr>
             <td style="padding: 24px 28px 0;">
-              <div style="background: linear-gradient(135deg, ${colors.bg} 0%, #ffffff 100%); border: 2px solid ${colors.border}; border-radius: 12px; padding: 20px;">
-                <div style="margin-bottom: 16px;">
-                  <span style="display: inline-block; background-color: ${colors.main}; color: #ffffff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 6px 16px; border-radius: 20px;">
-                    📋 ${content.riskLevel}
-                  </span>
-                </div>
-                <p style="color: #0f172a; margin: 0 0 8px 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Recommended Clinical Action:</p>
-                <p style="color: #334155; margin: 0; font-size: 14px; line-height: 1.7; white-space: pre-line;">${content.recommendation}</p>
+              <div style="background-color: ${colors.bg}; border: 2px solid ${colors.border}; border-radius: 12px; padding: 20px;">
+                <p style="color: ${colors.main}; margin: 0 0 12px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                  ⚕️ RECOMMENDED ACTIONS
+                </p>
+                <p style="color: #334155; margin: 0; font-size: 14px; line-height: 1.8; white-space: pre-line;">${content.recommendation}</p>
               </div>
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 28px; text-align: center; border-top: 2px solid #e2e8f0; margin-top: 24px; background-color: #f8fafc;">
-              <div style="background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
-                <p style="color: #92400e; margin: 0; font-size: 12px; font-weight: 600;">
-                  ⚠️ CLINICAL VERIFICATION REQUIRED
-                </p>
-                <p style="color: #a16207; margin: 6px 0 0 0; font-size: 11px;">
-                  ${content.closingMessage}
-                </p>
+            <td style="padding: 24px 28px;">
+              <div style="background-color: #f1f5f9; border-radius: 12px; padding: 16px; text-align: center;">
+                <p style="color: #64748b; margin: 0; font-size: 13px; line-height: 1.6;">${content.closingMessage}</p>
               </div>
-              <p style="color: #64748b; margin: 0 0 4px 0; font-size: 12px; font-weight: 600;">
-                NeoGuard NICU Monitoring System
-              </p>
-              <p style="color: #94a3b8; margin: 0; font-size: 11px;">
-                Powered by AI Clinical Decision Support
-              </p>
-              <p style="color: #cbd5e1; margin: 12px 0 0 0; font-size: 10px;">
-                Alert generated: ${request.timestamp} | This is an automated clinical alert.
-              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color: #0c4a6e; padding: 20px 28px; text-align: center;">
+              <p style="color: rgba(255,255,255,0.9); margin: 0 0 4px 0; font-size: 13px; font-weight: 600;">NeoGuard NICU Monitoring System</p>
+              <p style="color: rgba(255,255,255,0.6); margin: 0; font-size: 11px;">This is an automated medical alert. Please do not reply to this email.</p>
             </td>
           </tr>
 
@@ -491,81 +479,7 @@ function generatePremiumEmailHTML(
   </table>
   
 </body>
-</html>
-  `;
-}
-
-async function sendSMSAlert(
-  mobileNumber: string,
-  babyName: string,
-  bedNumber: string,
-  alertType: string,
-  triggerReason: string,
-  vitals: AlertEmailRequest['vitals'],
-  apiKey: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const formattedNumber = mobileNumber.replace(/\D/g, '').slice(-10);
-    
-    if (formattedNumber.length !== 10) {
-      console.log(`Invalid mobile number format: ${mobileNumber}`);
-      return { success: false, error: 'Invalid mobile number format' };
-    }
-
-    const alertEmoji = alertType === 'critical' ? '🚨' : alertType === 'high' ? '⚠️' : 'ℹ️';
-    const severity = alertType.toUpperCase();
-    
-    let smsMessage = `${alertEmoji} ${severity} NICU ALERT\n`;
-    smsMessage += `Patient: ${babyName}\n`;
-    smsMessage += `Bed: ${bedNumber}\n`;
-    smsMessage += `Reason: ${triggerReason}\n`;
-    
-    if (vitals) {
-      smsMessage += `HR: ${vitals.heartRate ?? 'N/A'} BPM | `;
-      smsMessage += `SpO2: ${vitals.spo2 ?? 'N/A'}% | `;
-      smsMessage += `Temp: ${vitals.temperature ?? 'N/A'}°C\n`;
-      smsMessage += `Position: ${vitals.sleepingPosition || 'Unknown'}`;
-    }
-    
-    smsMessage += `\n- NeoGuard NICU`;
-
-    console.log(`Sending SMS to ${formattedNumber}`);
-    console.log(`SMS Message: ${smsMessage}`);
-
-    const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-      method: 'POST',
-      headers: {
-        'authorization': apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        route: 'q',
-        message: smsMessage,
-        language: 'english',
-        flash: 0,
-        numbers: formattedNumber,
-      }),
-    });
-
-    const responseText = await response.text();
-    console.log(`Fast2SMS Response: ${responseText}`);
-
-    if (!response.ok) {
-      return { success: false, error: `SMS API error: ${response.status}` };
-    }
-
-    const result = JSON.parse(responseText);
-    
-    if (result.return === true) {
-      console.log(`SMS sent successfully to ${formattedNumber}`);
-      return { success: true };
-    } else {
-      return { success: false, error: result.message || 'SMS sending failed' };
-    }
-  } catch (error: any) {
-    console.error(`Error sending SMS to ${mobileNumber}:`, error);
-    return { success: false, error: error.message };
-  }
+</html>`;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -579,11 +493,9 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const FAST2SMS_API_KEY = Deno.env.get("FAST2SMS_API_KEY");
     
     console.log("BREVO_API_KEY configured:", BREVO_API_KEY ? "YES (length: " + BREVO_API_KEY.length + ")" : "NO");
     console.log("LOVABLE_API_KEY configured:", LOVABLE_API_KEY ? "YES" : "NO");
-    console.log("FAST2SMS_API_KEY configured:", FAST2SMS_API_KEY ? "YES" : "NO");
     
     if (!BREVO_API_KEY) {
       console.error("ERROR: BREVO_API_KEY is not configured");
@@ -593,7 +505,7 @@ const handler = async (req: Request): Promise<Response> => {
     const requestBody: AlertEmailRequest = await req.json();
     console.log("Request body received:", JSON.stringify(requestBody, null, 2));
     
-    const { to, mobileNumbers, babyName, babyId, bedNumber, alertType, message, triggerReason, timestamp, vitals } = requestBody;
+    const { to, babyName, babyId, bedNumber, alertType, message, triggerReason, timestamp, vitals } = requestBody;
     
     if (!babyName || !bedNumber || !alertType || !timestamp) {
       console.error("Missing required fields in request");
@@ -602,7 +514,6 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log(`Preparing to send ${alertType} alert email`);
     console.log(`  Recipient: ${to}`);
-    console.log(`  Mobile Numbers: ${mobileNumbers?.join(', ') || 'None'}`);
     console.log(`  Baby: ${babyName} (ID: ${babyId || 'N/A'})`);
     console.log(`  Bed: ${bedNumber}`);
     console.log(`  Trigger Reason: ${triggerReason || message}`);
@@ -679,40 +590,12 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("=== EMAIL SENT SUCCESSFULLY ===");
     console.log(`  Message ID: ${emailResult.messageId}`);
 
-    let smsResults: { number: string; success: boolean; error?: string }[] = [];
-    
-    if (FAST2SMS_API_KEY && mobileNumbers && mobileNumbers.length > 0) {
-      console.log("=== SENDING SMS ALERTS ===");
-      
-      const smsPromises = mobileNumbers.map(async (number) => {
-        const result = await sendSMSAlert(
-          number,
-          babyName,
-          bedNumber,
-          alertType,
-          triggerReason || message,
-          vitals,
-          FAST2SMS_API_KEY
-        );
-        return { number, ...result };
-      });
-      
-      smsResults = await Promise.all(smsPromises);
-      
-      const successfulSMS = smsResults.filter(r => r.success).length;
-      console.log(`SMS Alerts: ${successfulSMS}/${mobileNumbers.length} sent successfully`);
-    } else if (!FAST2SMS_API_KEY && mobileNumbers && mobileNumbers.length > 0) {
-      console.log("SMS alerts requested but FAST2SMS_API_KEY not configured");
-    }
-
     return new Response(
       JSON.stringify({ 
         success: true, 
         messageId: emailResult.messageId,
-        smsResults,
         details: {
           recipient: to,
-          mobileNumbers: mobileNumbers || [],
           babyName,
           alertType,
           triggerReason: triggerReason || message,

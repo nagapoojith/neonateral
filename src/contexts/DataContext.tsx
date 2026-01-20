@@ -303,23 +303,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
   }, [session, fetchBabies, fetchAlerts]);
 
-  const fetchBabyRecipients = useCallback(async (babyId: string): Promise<{ emails: string[]; mobileNumbers: string[] }> => {
+  const fetchBabyRecipients = useCallback(async (babyId: string): Promise<string[]> => {
     try {
       const { data, error } = await supabase
         .from('alert_recipients')
-        .select('email, mobile_number')
+        .select('email')
         .eq('baby_id', babyId)
         .eq('is_active', true);
 
       if (error) throw error;
       
-      const emails = data?.map(r => r.email).filter(e => e && !e.includes('@placeholder.local')) || [];
-      const mobileNumbers = data?.map(r => r.mobile_number).filter((m): m is string => !!m) || [];
-      
-      return { emails, mobileNumbers };
+      return data?.map(r => r.email).filter(e => e && !e.includes('@placeholder.local')) || [];
     } catch (error) {
       console.error('Error fetching recipients:', error);
-      return { emails: [], mobileNumbers: [] };
+      return [];
     }
   }, []);
 
@@ -364,7 +361,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         .update({ last_alert_sent_at: new Date().toISOString() })
         .eq('id', baby.id);
 
-      const { emails, mobileNumbers } = await fetchBabyRecipients(baby.id);
+      const emails = await fetchBabyRecipients(baby.id);
       
       const emailTargets = emails.length > 0 
         ? emails 
@@ -375,7 +372,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
           const { error: emailError } = await supabase.functions.invoke('send-alert-email', {
             body: {
               to: recipientEmail,
-              mobileNumbers: mobileNumbers,
               babyName: baby.name,
               babyId: baby.id,
               bedNumber: baby.bedNumber,
@@ -409,9 +405,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const successCount = results.filter(Boolean).length;
 
       if (successCount > 0) {
-        const smsInfo = mobileNumbers.length > 0 ? ` + ${mobileNumbers.length} SMS` : '';
         toast.warning(`Automatic ${level} alert triggered for ${baby.name}`, {
-          description: `Sent to ${successCount} email(s)${smsInfo}. ${triggerReason}`,
+          description: `Sent to ${successCount} email(s). ${triggerReason}`,
         });
       }
     } catch (error) {
