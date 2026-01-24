@@ -188,6 +188,12 @@ const Login = () => {
                 Sign up here
               </Link>
             </p>
+            <p className="text-sm text-muted-foreground">
+              Are you a parent?{' '}
+              <Link to="/parent/login" className="text-primary font-semibold hover:underline">
+                Parent Portal
+              </Link>
+            </p>
             <p className="text-xs text-muted-foreground/70">
               Authorized personnel only. All access is logged and monitored.
             </p>
