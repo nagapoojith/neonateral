@@ -27,6 +27,7 @@ import {
   BarChart3,
   User,
   Shield,
+  Waves,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -52,19 +53,24 @@ const BabyDetail = () => {
     return () => clearInterval(interval);
   }, [id, getVitalsHistory, getCurrentVitals]);
 
+  // PhysioNet Neonatal Thresholds
   const getVitalStatus = (type: string, value: number): 'normal' | 'warning' | 'critical' => {
     switch (type) {
       case 'heartRate':
-        if (value < 100 || value > 180) return 'critical';
-        if (value < 110 || value > 170) return 'warning';
+        if (value < 80 || value > 160) return 'critical';
+        if (value < 90 || value > 150) return 'warning';
+        return 'normal';
+      case 'respirationRate':
+        if (value < 30 || value > 60) return 'critical';
+        if (value < 35 || value > 55) return 'warning';
         return 'normal';
       case 'spo2':
         if (value < 90) return 'critical';
         if (value < 94) return 'warning';
         return 'normal';
       case 'temperature':
-        if (value < 36 || value > 38) return 'critical';
-        if (value < 36.5 || value > 37.5) return 'warning';
+        if (value < 36.0 || value > 37.5) return 'critical';
+        if (value < 36.2 || value > 37.3) return 'warning';
         return 'normal';
       default:
         return 'normal';
@@ -171,40 +177,40 @@ const BabyDetail = () => {
                 label: 'Heart Rate',
                 value: currentVitals.heartRate,
                 unit: 'bpm',
-                normal: '120-160 bpm',
+                normal: '80-160 bpm',
                 icon: Heart,
                 colorClass: 'text-chart-heart',
                 bgClass: 'bg-chart-heart/10',
+              },
+              {
+                type: 'respirationRate',
+                label: 'Resp Rate',
+                value: currentVitals.respirationRate,
+                unit: '/min',
+                normal: '30-60 /min',
+                icon: Waves,
+                colorClass: 'text-chart-spo2',
+                bgClass: 'bg-chart-spo2/10',
               },
               {
                 type: 'spo2',
                 label: 'SpO₂',
                 value: currentVitals.spo2,
                 unit: '%',
-                normal: '95-100%',
+                normal: '94-100%',
                 icon: Wind,
-                colorClass: 'text-chart-spo2',
-                bgClass: 'bg-chart-spo2/10',
+                colorClass: 'text-chart-movement',
+                bgClass: 'bg-chart-movement/10',
               },
               {
                 type: 'temperature',
                 label: 'Temperature',
                 value: currentVitals.temperature,
                 unit: '°C',
-                normal: '36.5-37.5°C',
+                normal: '36.0-37.5°C',
                 icon: Thermometer,
                 colorClass: 'text-chart-temp',
                 bgClass: 'bg-chart-temp/10',
-              },
-              {
-                type: 'movement',
-                label: 'Movement',
-                value: currentVitals.movement,
-                unit: '%',
-                normal: 'Activity level',
-                icon: Activity,
-                colorClass: 'text-chart-movement',
-                bgClass: 'bg-chart-movement/10',
               },
             ].map((vital) => {
               const Icon = vital.icon;
@@ -315,15 +321,15 @@ const BabyDetail = () => {
                 title="Heart Rate"
                 color="hsl(var(--chart-heart))"
                 unit="bpm"
-                normalRange={{ min: 120, max: 160 }}
+                normalRange={{ min: 80, max: 160 }}
               />
               <VitalsChart
                 data={vitalsHistory}
-                type="spo2"
-                title="SpO₂ Level"
+                type="respirationRate"
+                title="Respiration Rate"
                 color="hsl(var(--chart-spo2))"
-                unit="%"
-                normalRange={{ min: 95, max: 100 }}
+                unit="/min"
+                normalRange={{ min: 30, max: 60 }}
               />
               <VitalsChart
                 data={vitalsHistory}
@@ -331,14 +337,15 @@ const BabyDetail = () => {
                 title="Body Temperature"
                 color="hsl(var(--chart-temp))"
                 unit="°C"
-                normalRange={{ min: 36.5, max: 37.5 }}
+                normalRange={{ min: 36.0, max: 37.5 }}
               />
               <VitalsChart
                 data={vitalsHistory}
-                type="movement"
-                title="Movement Activity"
+                type="spo2"
+                title="SpO₂ Level"
                 color="hsl(var(--chart-movement))"
                 unit="%"
+                normalRange={{ min: 94, max: 100 }}
               />
             </div>
           </TabsContent>

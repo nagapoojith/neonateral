@@ -1,5 +1,5 @@
 import React from 'react';
-import { VitalSigns } from '@/types';
+import { VitalSigns } from '@/contexts/DataContext';
 import {
   LineChart,
   Line,
@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 
 interface VitalsChartProps {
   data: VitalSigns[];
-  type: 'heartRate' | 'spo2' | 'temperature' | 'movement';
+  type: 'heartRate' | 'respirationRate' | 'spo2' | 'temperature' | 'movement';
   title: string;
   color: string;
   unit: string;
