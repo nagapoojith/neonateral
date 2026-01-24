@@ -78,12 +78,42 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 // Store vitals history in memory (simulated real-time data)
 const vitalsHistory: Record<string, VitalSigns[]> = {};
 
-// PhysioNet Neonatal Thresholds for automatic alerts
+// PhysioNet Neonatal Thresholds for three-tier alert system
+// Normal: All vitals within safe range
+// High Priority (Early Warning): Vitals approaching abnormal limits
+// Critical: Any vital crosses critical threshold (email alerts sent)
 const VITAL_THRESHOLDS = {
-  heartRate: { min: 80, max: 160, warningMin: 90, warningMax: 150 },
-  respirationRate: { min: 30, max: 60, warningMin: 35, warningMax: 55 },
-  spo2: { critical: 90, warning: 94 },
-  temperature: { min: 36.0, max: 37.5, warningMin: 36.2, warningMax: 37.3 },
+  heartRate: { 
+    // Normal: 100-160 BPM
+    // High Priority: 80-99 or 151-160 BPM
+    // Critical: < 80 or > 160 BPM
+    criticalMin: 80, 
+    criticalMax: 160,
+    highPriorityMin: 100,
+    highPriorityMax: 150,
+  },
+  respirationRate: { 
+    // Normal: 30-60 /min
+    // High Priority: 30-34 or 56-60 /min
+    // Critical: < 30 or > 60 /min
+    criticalMin: 30, 
+    criticalMax: 60,
+    highPriorityMin: 35,
+    highPriorityMax: 55,
+  },
+  spo2: { 
+    critical: 90, 
+    warning: 94 
+  },
+  temperature: { 
+    // Normal: 36.5-37.5 °C
+    // High Priority: 36.0-36.4 or 37.3-37.5 °C
+    // Critical: < 36.0 or > 37.5 °C
+    criticalMin: 36.0, 
+    criticalMax: 37.5,
+    highPriorityMin: 36.5,
+    highPriorityMax: 37.2,
+  },
 };
 
 // Track last alert time to prevent spam
@@ -118,53 +148,59 @@ function generateVitals(babyId: string, status: BabyStatus): VitalSigns {
   };
 }
 
-// Check if vitals are outside safe thresholds (PhysioNet neonatal ranges)
+// Check if vitals are outside safe thresholds (Three-tier alert system)
+// Normal: All vitals within safe range
+// High Priority: Vitals approaching abnormal limits (early warning)
+// Critical: Any vital crosses critical threshold (requires immediate attention)
 function checkVitalThresholds(vitals: VitalSigns): { level: AlertLevel; reasons: string[] } {
   const reasons: string[] = [];
   let level: AlertLevel = 'normal';
 
-  // Heart rate check (PhysioNet: 80-160 BPM)
-  if (vitals.heartRate < VITAL_THRESHOLDS.heartRate.min || vitals.heartRate > VITAL_THRESHOLDS.heartRate.max) {
-    reasons.push(`Heart rate ${vitals.heartRate} BPM is outside safe range (${VITAL_THRESHOLDS.heartRate.min}-${VITAL_THRESHOLDS.heartRate.max} BPM)`);
+  // Heart rate check
+  // Normal: 100-150 BPM, High Priority: 80-99 or 151-160 BPM, Critical: <80 or >160 BPM
+  if (vitals.heartRate < VITAL_THRESHOLDS.heartRate.criticalMin || vitals.heartRate > VITAL_THRESHOLDS.heartRate.criticalMax) {
+    reasons.push(`Heart rate ${vitals.heartRate} BPM is CRITICAL (outside ${VITAL_THRESHOLDS.heartRate.criticalMin}-${VITAL_THRESHOLDS.heartRate.criticalMax} BPM)`);
     level = 'critical';
-  } else if (vitals.heartRate < VITAL_THRESHOLDS.heartRate.warningMin || vitals.heartRate > VITAL_THRESHOLDS.heartRate.warningMax) {
-    reasons.push(`Heart rate ${vitals.heartRate} BPM is in warning range`);
+  } else if (vitals.heartRate < VITAL_THRESHOLDS.heartRate.highPriorityMin || vitals.heartRate > VITAL_THRESHOLDS.heartRate.highPriorityMax) {
+    reasons.push(`Heart rate ${vitals.heartRate} BPM is HIGH PRIORITY (approaching limits)`);
     if (level === 'normal') level = 'high';
   }
 
-  // Respiration rate check (PhysioNet: 30-60 breaths/min)
-  if (vitals.respirationRate < VITAL_THRESHOLDS.respirationRate.min || vitals.respirationRate > VITAL_THRESHOLDS.respirationRate.max) {
-    reasons.push(`Respiration rate ${vitals.respirationRate} breaths/min is outside safe range (${VITAL_THRESHOLDS.respirationRate.min}-${VITAL_THRESHOLDS.respirationRate.max})`);
+  // Respiration rate check
+  // Normal: 35-55/min, High Priority: 30-34 or 56-60/min, Critical: <30 or >60/min
+  if (vitals.respirationRate < VITAL_THRESHOLDS.respirationRate.criticalMin || vitals.respirationRate > VITAL_THRESHOLDS.respirationRate.criticalMax) {
+    reasons.push(`Respiration rate ${vitals.respirationRate}/min is CRITICAL (outside ${VITAL_THRESHOLDS.respirationRate.criticalMin}-${VITAL_THRESHOLDS.respirationRate.criticalMax}/min)`);
     level = 'critical';
-  } else if (vitals.respirationRate < VITAL_THRESHOLDS.respirationRate.warningMin || vitals.respirationRate > VITAL_THRESHOLDS.respirationRate.warningMax) {
-    reasons.push(`Respiration rate ${vitals.respirationRate} breaths/min is in warning range`);
+  } else if (vitals.respirationRate < VITAL_THRESHOLDS.respirationRate.highPriorityMin || vitals.respirationRate > VITAL_THRESHOLDS.respirationRate.highPriorityMax) {
+    reasons.push(`Respiration rate ${vitals.respirationRate}/min is HIGH PRIORITY (approaching limits)`);
     if (level === 'normal') level = 'high';
   }
 
   // SpO2 check
   if (vitals.spo2 < VITAL_THRESHOLDS.spo2.critical) {
-    reasons.push(`SpO₂ ${vitals.spo2}% is critically low (below ${VITAL_THRESHOLDS.spo2.critical}%)`);
+    reasons.push(`SpO₂ ${vitals.spo2}% is CRITICAL (below ${VITAL_THRESHOLDS.spo2.critical}%)`);
     level = 'critical';
   } else if (vitals.spo2 < VITAL_THRESHOLDS.spo2.warning) {
-    reasons.push(`SpO₂ ${vitals.spo2}% is below normal (below ${VITAL_THRESHOLDS.spo2.warning}%)`);
+    reasons.push(`SpO₂ ${vitals.spo2}% is HIGH PRIORITY (below ${VITAL_THRESHOLDS.spo2.warning}%)`);
     if (level === 'normal') level = 'high';
   }
 
-  // Temperature check (PhysioNet: 36.0-37.5°C)
-  if (vitals.temperature < VITAL_THRESHOLDS.temperature.min || vitals.temperature > VITAL_THRESHOLDS.temperature.max) {
-    reasons.push(`Body temperature ${vitals.temperature}°C is outside safe range (${VITAL_THRESHOLDS.temperature.min}-${VITAL_THRESHOLDS.temperature.max}°C)`);
+  // Temperature check
+  // Normal: 36.5-37.2°C, High Priority: 36.0-36.4 or 37.3-37.5°C, Critical: <36.0 or >37.5°C
+  if (vitals.temperature < VITAL_THRESHOLDS.temperature.criticalMin || vitals.temperature > VITAL_THRESHOLDS.temperature.criticalMax) {
+    reasons.push(`Temperature ${vitals.temperature}°C is CRITICAL (outside ${VITAL_THRESHOLDS.temperature.criticalMin}-${VITAL_THRESHOLDS.temperature.criticalMax}°C)`);
     level = 'critical';
-  } else if (vitals.temperature < VITAL_THRESHOLDS.temperature.warningMin || vitals.temperature > VITAL_THRESHOLDS.temperature.warningMax) {
-    reasons.push(`Body temperature ${vitals.temperature}°C is in warning range`);
+  } else if (vitals.temperature < VITAL_THRESHOLDS.temperature.highPriorityMin || vitals.temperature > VITAL_THRESHOLDS.temperature.highPriorityMax) {
+    reasons.push(`Temperature ${vitals.temperature}°C is HIGH PRIORITY (approaching limits)`);
     if (level === 'normal') level = 'high';
   }
 
   // Sleeping position check
   if (vitals.sleepingPosition === 'prone') {
-    reasons.push(`Baby is in prone (stomach) sleeping position - SIDS risk`);
+    reasons.push(`Baby is in prone (stomach) position - CRITICAL SIDS risk`);
     level = 'critical';
   } else if (vitals.sleepingPosition === 'side') {
-    reasons.push(`Baby is in side sleeping position - not recommended`);
+    reasons.push(`Baby is in side position - HIGH PRIORITY (not recommended)`);
     if (level === 'normal') level = 'high';
   }
 
@@ -335,6 +371,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, level: AlertLevel, reasons: string[]) => {
+    // Only send email alerts for CRITICAL level - High Priority only shows dashboard warning
+    if (level !== 'critical') {
+      console.log(`Alert level ${level} for ${baby.name} - no email sent (only CRITICAL triggers email)`);
+      return;
+    }
+
     if (!alertsEnabledRef.current[baby.id]) {
       console.log(`Auto alerts disabled for baby ${baby.name}`);
       return;
@@ -350,7 +392,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     lastAlertTime[baby.id] = now;
     const triggerReason = reasons.join('; ');
-    const message = `AUTOMATIC ALERT: ${triggerReason}`;
+    const message = `CRITICAL ALERT: ${triggerReason}`;
 
     try {
       const { data: alertData, error: alertError } = await supabase
