@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useData, Baby, VitalSigns } from '@/contexts/DataContext';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Heart, Thermometer, Wind, Activity, ChevronRight, Bell, BellOff, Bed } from 'lucide-react';
+import { Heart, Thermometer, Wind, Activity, ChevronRight, Bell, BellOff, Bed, Waves } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BabyCardProps {
@@ -49,19 +49,24 @@ const BabyCard: React.FC<BabyCardProps> = ({ baby }) => {
 
   const status = statusConfig[baby.status as keyof typeof statusConfig] || statusConfig.normal;
 
+  // PhysioNet Neonatal Thresholds
   const getVitalStatus = (type: string, value: number): 'normal' | 'warning' | 'critical' => {
     switch (type) {
       case 'heartRate':
-        if (value < 100 || value > 180) return 'critical';
-        if (value < 110 || value > 170) return 'warning';
+        if (value < 80 || value > 160) return 'critical';
+        if (value < 90 || value > 150) return 'warning';
+        return 'normal';
+      case 'respirationRate':
+        if (value < 30 || value > 60) return 'critical';
+        if (value < 35 || value > 55) return 'warning';
         return 'normal';
       case 'spo2':
         if (value < 90) return 'critical';
         if (value < 94) return 'warning';
         return 'normal';
       case 'temperature':
-        if (value < 36 || value > 38) return 'critical';
-        if (value < 36.5 || value > 37.5) return 'warning';
+        if (value < 36.0 || value > 37.5) return 'critical';
+        if (value < 36.2 || value > 37.3) return 'warning';
         return 'normal';
       default:
         return 'normal';
@@ -139,9 +144,9 @@ const BabyCard: React.FC<BabyCardProps> = ({ baby }) => {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { type: 'heartRate', label: 'Heart Rate', value: vitals.heartRate, unit: 'bpm', icon: Heart, colorClass: 'text-chart-heart' },
-                { type: 'spo2', label: 'SpO₂', value: vitals.spo2, unit: '%', icon: Wind, colorClass: 'text-chart-spo2' },
+                { type: 'respirationRate', label: 'Resp Rate', value: vitals.respirationRate, unit: '/min', icon: Waves, colorClass: 'text-chart-spo2' },
                 { type: 'temperature', label: 'Temp', value: vitals.temperature, unit: '°C', icon: Thermometer, colorClass: 'text-chart-temp' },
-                { type: 'movement', label: 'Activity', value: vitals.movement, unit: '%', icon: Activity, colorClass: 'text-chart-movement' },
+                { type: 'spo2', label: 'SpO₂', value: vitals.spo2, unit: '%', icon: Wind, colorClass: 'text-chart-movement' },
               ].map((vital) => {
                 const Icon = vital.icon;
                 const vitalStatus = getVitalStatus(vital.type, vital.value);

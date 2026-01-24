@@ -9,6 +9,7 @@ export type AlertLevel = 'normal' | 'high' | 'critical';
 export interface VitalSigns {
   timestamp: number;
   heartRate: number;
+  respirationRate: number;
   spo2: number;
   temperature: number;
   movement: number;
@@ -77,22 +78,25 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 // Store vitals history in memory (simulated real-time data)
 const vitalsHistory: Record<string, VitalSigns[]> = {};
 
-// Thresholds for automatic alerts
+// PhysioNet Neonatal Thresholds for automatic alerts
 const VITAL_THRESHOLDS = {
-  heartRate: { min: 100, max: 180, warningMin: 110, warningMax: 170 },
+  heartRate: { min: 80, max: 160, warningMin: 90, warningMax: 150 },
+  respirationRate: { min: 30, max: 60, warningMin: 35, warningMax: 55 },
   spo2: { critical: 90, warning: 94 },
-  temperature: { min: 36, max: 38, warningMin: 36.5, warningMax: 37.5 },
+  temperature: { min: 36.0, max: 37.5, warningMin: 36.2, warningMax: 37.3 },
 };
 
 // Track last alert time to prevent spam
 const lastAlertTime: Record<string, number> = {};
 const ALERT_COOLDOWN = 30000; // 30 seconds between alerts for same baby
 
-// Generate realistic vital signs
+// Generate realistic vital signs based on PhysioNet neonatal ranges
 function generateVitals(babyId: string, status: BabyStatus): VitalSigns {
-  const baseHeartRate = status === 'critical' ? 180 : status === 'high' ? 160 : 140;
+  // Normal neonatal ranges based on PhysioNet datasets
+  const baseHeartRate = status === 'critical' ? 170 : status === 'high' ? 155 : 130;
+  const baseRespirationRate = status === 'critical' ? 65 : status === 'high' ? 55 : 42;
   const baseSpo2 = status === 'critical' ? 88 : status === 'high' ? 92 : 97;
-  const baseTemp = status === 'critical' ? 38.5 : status === 'high' ? 37.8 : 37.0;
+  const baseTemp = status === 'critical' ? 37.8 : status === 'high' ? 37.5 : 36.8;
   const baseMovement = status === 'critical' ? 20 : status === 'high' ? 35 : 50;
   
   const positions: ('back' | 'side' | 'prone')[] = ['back', 'side', 'prone'];
@@ -105,25 +109,35 @@ function generateVitals(babyId: string, status: BabyStatus): VitalSigns {
 
   return {
     timestamp: Date.now(),
-    heartRate: Math.round(baseHeartRate + (Math.random() - 0.5) * 20),
+    heartRate: Math.round(baseHeartRate + (Math.random() - 0.5) * 30),
+    respirationRate: Math.round(baseRespirationRate + (Math.random() - 0.5) * 15),
     spo2: Math.round(baseSpo2 + (Math.random() - 0.5) * 4),
-    temperature: parseFloat((baseTemp + (Math.random() - 0.5) * 0.5).toFixed(1)),
+    temperature: parseFloat((baseTemp + (Math.random() - 0.5) * 0.6).toFixed(1)),
     movement: Math.round(baseMovement + (Math.random() - 0.5) * 20),
     sleepingPosition: position,
   };
 }
 
-// Check if vitals are outside safe thresholds
+// Check if vitals are outside safe thresholds (PhysioNet neonatal ranges)
 function checkVitalThresholds(vitals: VitalSigns): { level: AlertLevel; reasons: string[] } {
   const reasons: string[] = [];
   let level: AlertLevel = 'normal';
 
-  // Heart rate check
+  // Heart rate check (PhysioNet: 80-160 BPM)
   if (vitals.heartRate < VITAL_THRESHOLDS.heartRate.min || vitals.heartRate > VITAL_THRESHOLDS.heartRate.max) {
     reasons.push(`Heart rate ${vitals.heartRate} BPM is outside safe range (${VITAL_THRESHOLDS.heartRate.min}-${VITAL_THRESHOLDS.heartRate.max} BPM)`);
     level = 'critical';
   } else if (vitals.heartRate < VITAL_THRESHOLDS.heartRate.warningMin || vitals.heartRate > VITAL_THRESHOLDS.heartRate.warningMax) {
     reasons.push(`Heart rate ${vitals.heartRate} BPM is in warning range`);
+    if (level === 'normal') level = 'high';
+  }
+
+  // Respiration rate check (PhysioNet: 30-60 breaths/min)
+  if (vitals.respirationRate < VITAL_THRESHOLDS.respirationRate.min || vitals.respirationRate > VITAL_THRESHOLDS.respirationRate.max) {
+    reasons.push(`Respiration rate ${vitals.respirationRate} breaths/min is outside safe range (${VITAL_THRESHOLDS.respirationRate.min}-${VITAL_THRESHOLDS.respirationRate.max})`);
+    level = 'critical';
+  } else if (vitals.respirationRate < VITAL_THRESHOLDS.respirationRate.warningMin || vitals.respirationRate > VITAL_THRESHOLDS.respirationRate.warningMax) {
+    reasons.push(`Respiration rate ${vitals.respirationRate} breaths/min is in warning range`);
     if (level === 'normal') level = 'high';
   }
 
@@ -136,7 +150,7 @@ function checkVitalThresholds(vitals: VitalSigns): { level: AlertLevel; reasons:
     if (level === 'normal') level = 'high';
   }
 
-  // Temperature check
+  // Temperature check (PhysioNet: 36.0-37.5°C)
   if (vitals.temperature < VITAL_THRESHOLDS.temperature.min || vitals.temperature > VITAL_THRESHOLDS.temperature.max) {
     reasons.push(`Body temperature ${vitals.temperature}°C is outside safe range (${VITAL_THRESHOLDS.temperature.min}-${VITAL_THRESHOLDS.temperature.max}°C)`);
     level = 'critical';
@@ -381,6 +395,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               timestamp: new Date().toLocaleString(),
               vitals: {
                 heartRate: vitals.heartRate,
+                respirationRate: vitals.respirationRate,
                 spo2: vitals.spo2,
                 temperature: vitals.temperature,
                 movement: vitals.movement,

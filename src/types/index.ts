@@ -29,6 +29,7 @@ export interface Baby {
 export interface VitalSigns {
   timestamp: number;
   heartRate: number;
+  respirationRate: number;
   spo2: number;
   temperature: number;
   movement: number;

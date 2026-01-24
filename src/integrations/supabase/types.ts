@@ -281,6 +281,7 @@ export type Database = {
           id: string
           movement: number | null
           recorded_at: string
+          respiration_rate: number | null
           sleeping_position: string | null
           spo2: number
           temperature: number
@@ -291,6 +292,7 @@ export type Database = {
           id?: string
           movement?: number | null
           recorded_at?: string
+          respiration_rate?: number | null
           sleeping_position?: string | null
           spo2: number
           temperature: number
@@ -301,6 +303,7 @@ export type Database = {
           id?: string
           movement?: number | null
           recorded_at?: string
+          respiration_rate?: number | null
           sleeping_position?: string | null
           spo2?: number
           temperature?: number
