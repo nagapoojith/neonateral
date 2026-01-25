@@ -327,33 +327,16 @@ const HospitalMap: React.FC = () => {
     toast.success(`Showing hospitals near "${manualLocation}"`);
   };
 
-  const openDirections = (hospital: Hospital) => {
-    // Use Google Maps with user's current location as origin for reliable navigation
-    // IMPORTANT: Use window.open with noopener,noreferrer to avoid ERR_BLOCKED_BY_RESPONSE
-    let directionsUrl: string;
-    
-    if (userLocation) {
-      // Include user's current location as starting point
-      directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
-    } else {
-      // Let Google Maps detect current location automatically
-      directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
-    }
-    
-    // Open in new window/tab - this avoids iframe blocking issues
-    const newWindow = window.open(directionsUrl, '_blank', 'noopener,noreferrer');
-    if (!newWindow) {
-      // Fallback: If popup blocked, try direct navigation
-      window.location.href = directionsUrl;
-    }
+  const openTomTomDirections = (hospital: Hospital) => {
+    // Always use Google Maps for reliable cross-platform directions
+    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lng}&destination_place_id=${hospital.placeId || ''}&travelmode=driving`;
+    window.open(directionsUrl, '_blank');
   };
 
   const openGoogleMapsView = (hospital: Hospital) => {
-    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${hospital.lat},${hospital.lng}`;
-    const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-    if (!newWindow) {
-      window.location.href = mapsUrl;
-    }
+    const query = encodeURIComponent(hospital.name + ', ' + hospital.address);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    window.open(mapsUrl, '_blank');
   };
 
   const callHospital = (phone: string) => {
@@ -484,10 +467,10 @@ const HospitalMap: React.FC = () => {
                   </div>
                   <Button 
                     size="sm" 
-                    onClick={() => openDirections(selectedHospital)}
-                    className="flex-shrink-0 gap-2"
+                    onClick={() => openTomTomDirections(selectedHospital)}
+                    className="flex-shrink-0"
                   >
-                    <Navigation className="w-4 h-4" />
+                    <Navigation className="w-4 h-4 mr-1" />
                     Get Directions
                   </Button>
                 </div>
@@ -560,7 +543,7 @@ const HospitalMap: React.FC = () => {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openDirections(hospital);
+                        openTomTomDirections(hospital);
                       }}
                       className="gap-1.5 flex-1 min-w-[120px]"
                     >
