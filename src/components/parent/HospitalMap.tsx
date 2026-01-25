@@ -28,7 +28,7 @@ const HospitalMap: React.FC = () => {
   const [manualLocation, setManualLocation] = useState('');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 13.0827, lng: 80.2707 });
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 13.0569, lng: 80.2425 });
 
   const fallbackHospitals: Hospital[] = [
     {
@@ -111,6 +111,7 @@ const HospitalMap: React.FC = () => {
       setLocationError('Geolocation is not supported by your browser');
       setIsLoading(false);
       setHospitals(fallbackHospitals);
+      setSelectedHospital(fallbackHospitals[0]);
       return;
     }
 
@@ -118,9 +119,10 @@ const HospitalMap: React.FC = () => {
       (position) => {
         const { latitude, longitude } = position.coords;
         setUserLocation({ lat: latitude, lng: longitude });
-        setMapCenter({ lat: latitude, lng: longitude });
         setIsLoading(false);
         setHospitals(fallbackHospitals);
+        setSelectedHospital(fallbackHospitals[0]);
+        setMapCenter({ lat: fallbackHospitals[0].lat, lng: fallbackHospitals[0].lng });
         toast.success('Location found! Showing nearby hospitals.');
       },
       (error) => {
@@ -128,6 +130,8 @@ const HospitalMap: React.FC = () => {
         setLocationError('Unable to get your location. Please enable location access or search manually.');
         setIsLoading(false);
         setHospitals(fallbackHospitals);
+        setSelectedHospital(fallbackHospitals[0]);
+        setMapCenter({ lat: fallbackHospitals[0].lat, lng: fallbackHospitals[0].lng });
       },
       {
         enableHighAccuracy: true,
@@ -145,13 +149,15 @@ const HospitalMap: React.FC = () => {
     setIsLoading(true);
     setTimeout(() => {
       setHospitals(fallbackHospitals);
+      setSelectedHospital(fallbackHospitals[0]);
+      setMapCenter({ lat: fallbackHospitals[0].lat, lng: fallbackHospitals[0].lng });
       setIsLoading(false);
       toast.success(`Showing hospitals near "${manualLocation}"`);
     }, 800);
   };
 
   const openGoogleMapsDirections = (hospital: Hospital) => {
-    const destination = `${hospital.lat},${hospital.lng}`;
+    const destination = encodeURIComponent(hospital.name + ', ' + hospital.address);
     let mapsUrl: string;
 
     if (userLocation) {
@@ -164,10 +170,8 @@ const HospitalMap: React.FC = () => {
   };
 
   const openGoogleMapsView = (hospital: Hospital) => {
-    const mapsUrl = hospital.placeId
-      ? `https://www.google.com/maps/place/?q=place_id:${hospital.placeId}`
-      : `https://www.google.com/maps/search/?api=1&query=${hospital.lat},${hospital.lng}`;
-    
+    const query = encodeURIComponent(hospital.name + ', ' + hospital.address);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
     window.open(mapsUrl, '_blank');
   };
 
@@ -201,16 +205,14 @@ const HospitalMap: React.FC = () => {
   };
 
   const getMapEmbedUrl = () => {
-    const lat = selectedHospital?.lat || mapCenter.lat;
-    const lng = selectedHospital?.lng || mapCenter.lng;
-    const zoom = selectedHospital ? 16 : 13;
+    const hospital = selectedHospital || fallbackHospitals[0];
+    const lat = hospital.lat;
+    const lng = hospital.lng;
+    const zoom = 16;
     
-    let markers = '';
-    hospitals.forEach(h => {
-      markers += `&marker=${h.lat},${h.lng}`;
-    });
-    
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.05},${lat - 0.03},${lng + 0.05},${lat + 0.03}&layer=mapnik&marker=${lat},${lng}`;
+    // Using OpenStreetMap embed with marker on exact hospital location
+    const bbox = `${lng - 0.008},${lat - 0.005},${lng + 0.008},${lat + 0.005}`;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
   };
 
   useEffect(() => {
@@ -288,10 +290,10 @@ const HospitalMap: React.FC = () => {
             <div>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Map className="w-5 h-5 text-primary" />
-                Hospital Map
+                Hospital Location
               </CardTitle>
               <CardDescription>
-                Interactive map powered by OpenStreetMap • No API key required
+                {selectedHospital ? selectedHospital.name : 'Select a hospital to view on map'}
               </CardDescription>
             </div>
           </div>
@@ -299,7 +301,7 @@ const HospitalMap: React.FC = () => {
         <CardContent className="p-0">
           <div className="h-[300px] w-full relative">
             <iframe
-              title="Hospital Map"
+              title="Hospital Location Map"
               src={getMapEmbedUrl()}
               className="w-full h-full border-0"
               loading="lazy"
@@ -318,7 +320,7 @@ const HospitalMap: React.FC = () => {
                     className="flex-shrink-0"
                   >
                     <Navigation className="w-4 h-4 mr-1" />
-                    Directions
+                    Get Directions
                   </Button>
                 </div>
               </div>
@@ -429,12 +431,6 @@ const HospitalMap: React.FC = () => {
           </ScrollArea>
         </CardContent>
       </Card>
-
-      <div className="text-center py-3">
-        <p className="text-xs text-muted-foreground">
-          Map powered by OpenStreetMap • Directions via Google Maps • No API key required
-        </p>
-      </div>
     </div>
   );
 };
