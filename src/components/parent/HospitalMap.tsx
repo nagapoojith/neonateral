@@ -327,15 +327,23 @@ const HospitalMap: React.FC = () => {
     toast.success(`Showing hospitals near "${manualLocation}"`);
   };
 
-  const openTomTomDirections = (hospital: Hospital) => {
-    // Always use Google Maps for reliable cross-platform directions
-    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lng}&destination_place_id=${hospital.placeId || ''}&travelmode=driving`;
+  const openDirections = (hospital: Hospital) => {
+    // Use Google Maps with user's current location as origin for reliable navigation
+    let directionsUrl: string;
+    
+    if (userLocation) {
+      // Include user's current location as starting point
+      directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
+    } else {
+      // Let Google Maps detect current location automatically
+      directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
+    }
+    
     window.open(directionsUrl, '_blank');
   };
 
   const openGoogleMapsView = (hospital: Hospital) => {
-    const query = encodeURIComponent(hospital.name + ', ' + hospital.address);
-    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${hospital.lat},${hospital.lng}`;
     window.open(mapsUrl, '_blank');
   };
 
@@ -467,10 +475,10 @@ const HospitalMap: React.FC = () => {
                   </div>
                   <Button 
                     size="sm" 
-                    onClick={() => openTomTomDirections(selectedHospital)}
-                    className="flex-shrink-0"
+                    onClick={() => openDirections(selectedHospital)}
+                    className="flex-shrink-0 gap-2"
                   >
-                    <Navigation className="w-4 h-4 mr-1" />
+                    <Navigation className="w-4 h-4" />
                     Get Directions
                   </Button>
                 </div>
@@ -543,7 +551,7 @@ const HospitalMap: React.FC = () => {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openTomTomDirections(hospital);
+                        openDirections(hospital);
                       }}
                       className="gap-1.5 flex-1 min-w-[120px]"
                     >
