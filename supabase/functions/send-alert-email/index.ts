@@ -205,8 +205,8 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
   const posInfo = getPositionInfo(request.vitals?.sleepingPosition);
   const alertBadge = getAlertTypeBadge(request.alertType);
 
-  // Compact vital card for wide 2-column layout
-  const createCompactVitalCard = (
+  // Ultra-compact vital card for 3-column horizontal layout - reduces vertical height
+  const createVitalCard = (
     icon: string,
     bgColor: string,
     label: string,
@@ -215,30 +215,18 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
     normalRange: string,
     status: { status: string; color: string; bgColor: string }
   ) => `
-    <td width="50%" style="padding: 6px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${bgColor}; border-radius: 10px;">
+    <td width="33%" style="padding: 4px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${bgColor}; border-radius: 8px;">
         <tr>
-          <td style="padding: 12px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td width="36" valign="top">
-                  <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.9); border-radius: 8px; text-align: center; line-height: 32px;">
-                    <span style="font-size: 16px;">${icon}</span>
-                  </div>
-                </td>
-                <td style="padding-left: 10px;" valign="top">
-                  <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 600; text-transform: uppercase;">${label}</p>
-                  <p style="margin: 4px 0 0 0;">
-                    <span style="font-size: 22px; font-weight: 800; color: #1f2937;">${value ?? '—'}</span>
-                    <span style="font-size: 12px; color: #6b7280;">${unit}</span>
-                  </p>
-                  <div style="margin-top: 6px;">
-                    <span style="display: inline-block; padding: 3px 8px; background: ${status.bgColor}; color: ${status.color}; font-size: 10px; font-weight: 700; border-radius: 12px;">${status.status}</span>
-                    <span style="color: #9ca3af; font-size: 10px; margin-left: 4px;">Normal: ${normalRange}</span>
-                  </div>
-                </td>
-              </tr>
-            </table>
+          <td style="padding: 10px 8px; text-align: center;">
+            <span style="font-size: 20px;">${icon}</span>
+            <p style="margin: 4px 0 2px 0; color: #6b7280; font-size: 9px; font-weight: 700; text-transform: uppercase;">${label}</p>
+            <p style="margin: 0;">
+              <span style="font-size: 20px; font-weight: 800; color: #1f2937;">${value ?? '—'}</span>
+              <span style="font-size: 10px; color: #6b7280;">${unit}</span>
+            </p>
+            <span style="display: inline-block; margin-top: 4px; padding: 2px 6px; background: ${status.bgColor}; color: ${status.color}; font-size: 8px; font-weight: 700; border-radius: 10px;">${status.status}</span>
+            <p style="margin: 2px 0 0 0; color: #9ca3af; font-size: 8px;">${normalRange}</p>
           </td>
         </tr>
       </table>
@@ -246,26 +234,16 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
   `;
 
   const createPositionCard = () => `
-    <td width="50%" style="padding: 6px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${posInfo.isSafe ? '#ecfdf5' : '#fef3c7'}; border-radius: 10px;">
+    <td width="33%" style="padding: 4px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${posInfo.isSafe ? '#ecfdf5' : '#fef3c7'}; border-radius: 8px;">
         <tr>
-          <td style="padding: 12px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td width="36" valign="top">
-                  <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.9); border-radius: 8px; text-align: center; line-height: 32px;">
-                    <span style="font-size: 16px;">🛏️</span>
-                  </div>
-                </td>
-                <td style="padding-left: 10px;" valign="top">
-                  <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 600; text-transform: uppercase;">POSITION</p>
-                  <p style="margin: 4px 0 0 0;">
-                    <span style="font-size: 16px; font-weight: 700; color: ${posInfo.isSafe ? '#059669' : '#dc2626'};">${posInfo.label}</span>
-                  </p>
-                  <p style="margin: 4px 0 0 0; color: #9ca3af; font-size: 10px;">Safe: Back/Supine</p>
-                </td>
-              </tr>
-            </table>
+          <td style="padding: 10px 8px; text-align: center;">
+            <span style="font-size: 20px;">🛏️</span>
+            <p style="margin: 4px 0 2px 0; color: #6b7280; font-size: 9px; font-weight: 700; text-transform: uppercase;">POSITION</p>
+            <p style="margin: 0;">
+              <span style="font-size: 12px; font-weight: 700; color: ${posInfo.isSafe ? '#059669' : '#dc2626'};">${posInfo.isSafe ? 'Safe' : 'UNSAFE'}</span>
+            </p>
+            <span style="display: inline-block; margin-top: 4px; padding: 2px 6px; background: ${posInfo.isSafe ? '#d1fae5' : '#fee2e2'}; color: ${posInfo.isSafe ? '#059669' : '#dc2626'}; font-size: 8px; font-weight: 700; border-radius: 10px;">${posInfo.label.split(' ')[0]}</span>
           </td>
         </tr>
       </table>
@@ -273,27 +251,17 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
   `;
 
   const createMovementCard = () => `
-    <td width="50%" style="padding: 6px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 10px;">
+    <td width="33%" style="padding: 4px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 8px;">
         <tr>
-          <td style="padding: 12px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td width="36" valign="top">
-                  <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.9); border-radius: 8px; text-align: center; line-height: 32px;">
-                    <span style="font-size: 16px;">📊</span>
-                  </div>
-                </td>
-                <td style="padding-left: 10px;" valign="top">
-                  <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 600; text-transform: uppercase;">MOVEMENT</p>
-                  <p style="margin: 4px 0 0 0;">
-                    <span style="font-size: 22px; font-weight: 800; color: #1f2937;">${request.vitals?.movement ?? 60}</span>
-                    <span style="font-size: 12px; color: #6b7280;">%</span>
-                  </p>
-                  <p style="margin: 4px 0 0 0; color: #9ca3af; font-size: 10px;">Activity Level</p>
-                </td>
-              </tr>
-            </table>
+          <td style="padding: 10px 8px; text-align: center;">
+            <span style="font-size: 20px;">📊</span>
+            <p style="margin: 4px 0 2px 0; color: #6b7280; font-size: 9px; font-weight: 700; text-transform: uppercase;">MOVEMENT</p>
+            <p style="margin: 0;">
+              <span style="font-size: 20px; font-weight: 800; color: #1f2937;">${request.vitals?.movement ?? 60}</span>
+              <span style="font-size: 10px; color: #6b7280;">%</span>
+            </p>
+            <span style="display: inline-block; margin-top: 4px; padding: 2px 6px; background: #e5e7eb; color: #374151; font-size: 8px; font-weight: 700; border-radius: 10px;">ACTIVITY</span>
           </td>
         </tr>
       </table>
@@ -306,61 +274,58 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NeoGuard NICU Alert</title>
+  <title>NICU Alert</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #e8eef4; -webkit-font-smoothing: antialiased;">
   
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #e8eef4;">
     <tr>
-      <td align="center" style="padding: 16px 8px;">
+      <td align="center" style="padding: 12px 8px;">
         
-        <!-- Main Container - EXTRA WIDE LAYOUT for one-screen viewing -->
-        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 650px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
+        <!-- Main Container - ULTRA WIDE 800px for one-screen viewing -->
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 800px; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);">
           
           <!-- Compact Header with Alert Badge -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0d4f5f 0%, #0f766e 100%); padding: 16px 20px;">
+            <td style="background: linear-gradient(135deg, #0d4f5f 0%, #0f766e 100%); padding: 12px 16px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td width="50" valign="middle">
-                    <span style="font-size: 32px;">🏥</span>
+                  <td width="40" valign="middle">
+                    <span style="font-size: 28px;">🏥</span>
                   </td>
-                  <td style="padding-left: 12px;" valign="middle">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 18px; font-weight: 700;">NeoGuard NICU Alert</h1>
-                    <p style="color: rgba(255,255,255,0.8); margin: 2px 0 0 0; font-size: 12px;">Neonatal Intensive Care Monitoring</p>
+                  <td style="padding-left: 10px;" valign="middle">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 16px; font-weight: 700;">NICU Alert</h1>
                   </td>
                   <td align="right" valign="middle">
-                    <span style="display: inline-block; padding: 8px 20px; background: ${alertBadge.bgColor}; color: ${alertBadge.textColor}; font-size: 14px; font-weight: 800; border-radius: 20px; text-transform: uppercase; letter-spacing: 2px; border: 2px solid rgba(255,255,255,0.3);">${alertBadge.label}</span>
+                    <span style="display: inline-block; padding: 6px 16px; background: ${alertBadge.bgColor}; color: ${alertBadge.textColor}; font-size: 12px; font-weight: 800; border-radius: 16px; text-transform: uppercase; letter-spacing: 1px;">${alertBadge.label}</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Alert Trigger + Patient Info - Side by Side -->
+          <!-- Patient + Alert Trigger - Horizontal -->
           <tr>
-            <td style="padding: 16px 20px;">
+            <td style="padding: 12px 16px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <!-- Alert Trigger -->
-                  <td width="55%" style="padding-right: 10px; vertical-align: top;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 8px; height: 100%;">
+                  <td width="30%" style="padding-right: 8px; vertical-align: top;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
                       <tr>
-                        <td style="padding: 14px;">
-                          <p style="color: #b45309; margin: 0 0 6px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">⚡ ALERT TRIGGER</p>
-                          <p style="color: #1f2937; margin: 0; font-size: 13px; line-height: 1.5; font-weight: 500;">${request.triggerReason || request.message}</p>
+                        <td style="padding: 10px;">
+                          <p style="color: #64748b; margin: 0 0 4px 0; font-size: 9px; font-weight: 700; text-transform: uppercase;">👶 PATIENT</p>
+                          <p style="color: #0f172a; margin: 0; font-size: 16px; font-weight: 700;">${request.babyName}</p>
+                          <p style="color: #64748b; margin: 2px 0 0 0; font-size: 10px;">Bed: ${request.bedNumber} | ${request.timestamp}</p>
                         </td>
                       </tr>
                     </table>
                   </td>
-                  <!-- Patient Info -->
-                  <td width="45%" style="padding-left: 10px; vertical-align: top;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; height: 100%;">
+                  <td width="70%" style="padding-left: 8px; vertical-align: top;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fffbeb; border-left: 3px solid #f59e0b; border-radius: 6px;">
                       <tr>
-                        <td style="padding: 14px;">
-                          <p style="color: #64748b; margin: 0 0 8px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">👶 PATIENT</p>
-                          <p style="color: #0f172a; margin: 0; font-size: 18px; font-weight: 700;">${request.babyName}</p>
-                          <p style="color: #64748b; margin: 4px 0 0 0; font-size: 12px;"><strong>Bed:</strong> ${request.bedNumber} &nbsp;|&nbsp; <strong>Time:</strong> ${request.timestamp}</p>
+                        <td style="padding: 10px;">
+                          <p style="color: #b45309; margin: 0 0 4px 0; font-size: 9px; font-weight: 700; text-transform: uppercase;">⚡ ALERT TRIGGER</p>
+                          <p style="color: #1f2937; margin: 0; font-size: 12px; line-height: 1.4; font-weight: 500;">${request.triggerReason || request.message}</p>
                         </td>
                       </tr>
                     </table>
@@ -370,20 +335,18 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
             </td>
           </tr>
 
-          <!-- Vital Signs - 2 Column Grid for compact view -->
+          <!-- Vital Signs - 3x2 Horizontal Grid for minimal height -->
           <tr>
-            <td style="padding: 0 20px 16px;">
-              <p style="color: #dc2626; margin: 0 0 10px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">❤️ VITAL SIGNS SNAPSHOT</p>
+            <td style="padding: 0 16px 10px;">
+              <p style="color: #dc2626; margin: 0 0 8px 0; font-size: 10px; font-weight: 700; text-transform: uppercase;">❤️ VITAL SIGNS</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  ${createCompactVitalCard("❤️", "#fef2f2", "Heart Rate", request.vitals?.heartRate, "BPM", "120-160", hrStatus)}
-                  ${createCompactVitalCard("🫁", "#eff6ff", "Respiration", request.vitals?.respirationRate, "/min", "35-55", rrStatus)}
+                  ${createVitalCard("❤️", "#fef2f2", "Heart Rate", request.vitals?.heartRate, "BPM", "100-150", hrStatus)}
+                  ${createVitalCard("🫁", "#eff6ff", "Respiration", request.vitals?.respirationRate, "/min", "35-55", rrStatus)}
+                  ${createVitalCard("💧", "#ecfdf5", "SpO₂", request.vitals?.spo2, "%", "95-100%", spo2Status)}
                 </tr>
                 <tr>
-                  ${createCompactVitalCard("💧", "#ecfdf5", "SpO₂", request.vitals?.spo2, "%", "95-100%", spo2Status)}
-                  ${createCompactVitalCard("🌡️", "#fff7ed", "Temperature", request.vitals?.temperature, "°C", "36.5-37.5", tempStatus)}
-                </tr>
-                <tr>
+                  ${createVitalCard("🌡️", "#fff7ed", "Temperature", request.vitals?.temperature, "°C", "36.5-37.2", tempStatus)}
                   ${createPositionCard()}
                   ${createMovementCard()}
                 </tr>
@@ -391,30 +354,28 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
             </td>
           </tr>
 
-          <!-- Clinical Analysis + Recommended Actions - Side by Side for compact view -->
+          <!-- Analysis + Actions - Side by Side compact -->
           <tr>
-            <td style="padding: 0 20px 16px;">
+            <td style="padding: 0 16px 10px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <!-- Clinical Analysis -->
-                  <td width="50%" style="padding-right: 8px; vertical-align: top;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; height: 100%;">
+                  <td width="45%" style="padding-right: 6px; vertical-align: top;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
                       <tr>
-                        <td style="padding: 14px;">
-                          <p style="color: #475569; margin: 0 0 8px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">🔬 ANALYSIS</p>
-                          <p style="color: #475569; margin: 0; font-size: 12px; line-height: 1.5;">${content.medicalExplanation}</p>
+                        <td style="padding: 10px;">
+                          <p style="color: #475569; margin: 0 0 6px 0; font-size: 9px; font-weight: 700; text-transform: uppercase;">🔬 ANALYSIS</p>
+                          <p style="color: #475569; margin: 0; font-size: 11px; line-height: 1.4;">${content.medicalExplanation}</p>
                         </td>
                       </tr>
                     </table>
                   </td>
-                  <!-- Recommended Actions - RED -->
-                  <td width="50%" style="padding-left: 8px; vertical-align: top;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fef2f2; border-radius: 10px; border: 1px solid #fecaca; height: 100%;">
+                  <td width="55%" style="padding-left: 6px; vertical-align: top;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fef2f2; border-radius: 6px; border: 1px solid #fecaca;">
                       <tr>
-                        <td style="padding: 14px;">
-                          <p style="color: #dc2626; margin: 0 0 8px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">🚨 ACTIONS</p>
+                        <td style="padding: 10px;">
+                          <p style="color: #dc2626; margin: 0 0 6px 0; font-size: 9px; font-weight: 700; text-transform: uppercase;">🚨 ACTIONS REQUIRED</p>
                           ${content.recommendations.slice(0, 3).map((rec) => `
-                            <p style="color: #b91c1c; margin: 0 0 6px 0; font-size: 11px; line-height: 1.4; font-weight: 500;">• ${rec.replace(/^\d+\.\s*/, '')}</p>
+                            <p style="color: #b91c1c; margin: 0 0 4px 0; font-size: 10px; line-height: 1.3; font-weight: 500;">• ${rec.replace(/^\d+\.\s*/, '')}</p>
                           `).join("")}
                         </td>
                       </tr>
@@ -425,11 +386,11 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
             </td>
           </tr>
 
-          <!-- Footer - Compact -->
+          <!-- Footer - Minimal -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0d4f5f 0%, #0f766e 100%); padding: 14px 20px; text-align: center;">
-              <p style="color: rgba(255,255,255,0.7); margin: 0; font-size: 11px;">Automated alert. Do not reply. &nbsp;|&nbsp; ${content.closingMessage}</p>
-              <p style="color: rgba(255,255,255,0.5); margin: 6px 0 0 0; font-size: 10px;">© 2026 Hospital Systems</p>
+            <td style="background: linear-gradient(135deg, #0d4f5f 0%, #0f766e 100%); padding: 10px 16px; text-align: center;">
+              <p style="color: rgba(255,255,255,0.6); margin: 0; font-size: 9px;">Automated alert - Do not reply</p>
+              <p style="color: rgba(255,255,255,0.5); margin: 4px 0 0 0; font-size: 9px;">© 2026 Hospital Systems</p>
             </td>
           </tr>
 
