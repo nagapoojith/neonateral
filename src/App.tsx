@@ -152,23 +152,10 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      {/* Parent Portal Routes */}
-      <Route
-        path="/parent/login"
-        element={
-          <ParentPublicRoute>
-            <ParentLogin />
-          </ParentPublicRoute>
-        }
-      />
-      <Route
-        path="/parent/portal"
-        element={
-          <ParentProtectedRoute>
-            <ParentPortal />
-          </ParentProtectedRoute>
-        }
-      />
+      {/* Parent Portal Routes - No authentication required */}
+      <Route path="/parent" element={<Navigate to="/parent/portal" replace />} />
+      <Route path="/parent/login" element={<Navigate to="/parent/portal" replace />} />
+      <Route path="/parent/portal" element={<ParentPortal />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
