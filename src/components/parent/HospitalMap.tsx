@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MapPin, Navigation, Phone, Clock, Loader2, Search, ExternalLink, AlertTriangle, Star, Map } from 'lucide-react';
+import { MapPin, Navigation, Phone, Clock, Loader2, Search, AlertTriangle, Star, Map, X, Car } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -22,18 +22,28 @@ interface Hospital {
   placeId?: string;
 }
 
+interface RouteInfo {
+  distance: string;
+  duration: string;
+  hospitalName: string;
+}
+
 const HospitalMap: React.FC = () => {
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [manualLocation, setManualLocation] = useState('');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [tomtomApiKey, setTomtomApiKey] = useState<string | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [showingRoute, setShowingRoute] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const routeLayerRef = useRef<string | null>(null);
 
   const fallbackHospitals: Hospital[] = [
     {
@@ -159,20 +169,41 @@ const HospitalMap: React.FC = () => {
         key: tomtomApiKey,
         container: mapRef.current,
         center: [hospital.lng, hospital.lat],
-        zoom: 15,
+        zoom: 14,
         style: 'https://api.tomtom.com/style/1/style/22.2.1-*?map=basic_main&poi=poi_main',
       });
 
       mapInstanceRef.current.addControl(new window.tt.NavigationControl());
       
-      addMarker(hospital);
+      addHospitalMarker(hospital);
       setMapLoaded(true);
     };
 
     loadTomTomSDK();
   }, [tomtomApiKey, mapLoaded]);
 
-  const addMarker = (hospital: Hospital) => {
+  const clearRoute = () => {
+    if (!mapInstanceRef.current) return;
+    
+    if (routeLayerRef.current) {
+      try {
+        if (mapInstanceRef.current.getLayer(routeLayerRef.current)) {
+          mapInstanceRef.current.removeLayer(routeLayerRef.current);
+        }
+        if (mapInstanceRef.current.getSource(routeLayerRef.current)) {
+          mapInstanceRef.current.removeSource(routeLayerRef.current);
+        }
+      } catch (e) {
+        console.error('Error clearing route:', e);
+      }
+      routeLayerRef.current = null;
+    }
+    
+    setRouteInfo(null);
+    setShowingRoute(false);
+  };
+
+  const addHospitalMarker = (hospital: Hospital) => {
     if (!mapInstanceRef.current || !window.tt) return;
 
     markersRef.current.forEach(marker => marker.remove());
@@ -211,17 +242,186 @@ const HospitalMap: React.FC = () => {
     
     marker.setPopup(popup);
     markersRef.current.push(marker);
+  };
 
-    mapInstanceRef.current.flyTo({
-      center: [hospital.lng, hospital.lat],
-      zoom: 16,
-      duration: 1000,
-    });
+  const addUserMarker = (lat: number, lng: number) => {
+    if (!mapInstanceRef.current || !window.tt) return;
+
+    const userMarkerElement = document.createElement('div');
+    userMarkerElement.innerHTML = `
+      <div style="
+        background: #3b82f6;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+        position: relative;
+      ">
+        <div style="
+          position: absolute;
+          top: -3px;
+          left: -3px;
+          right: -3px;
+          bottom: -3px;
+          border-radius: 50%;
+          border: 2px solid rgba(59, 130, 246, 0.3);
+          animation: pulse 2s infinite;
+        "></div>
+      </div>
+    `;
+
+    const userMarker = new window.tt.Marker({ element: userMarkerElement })
+      .setLngLat([lng, lat])
+      .addTo(mapInstanceRef.current);
+
+    markersRef.current.push(userMarker);
+  };
+
+  const drawRoute = async (hospital: Hospital, startLat: number, startLng: number) => {
+    if (!mapInstanceRef.current || !tomtomApiKey) {
+      toast.error('Map not ready. Please wait.');
+      return;
+    }
+
+    setIsRouteLoading(true);
+    clearRoute();
+
+    try {
+      const routeUrl = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLng}:${hospital.lat},${hospital.lng}/json?key=${tomtomApiKey}&traffic=true&travelMode=car`;
+      
+      const response = await fetch(routeUrl);
+      
+      if (!response.ok) {
+        throw new Error('Failed to calculate route');
+      }
+
+      const data = await response.json();
+      
+      if (!data.routes || data.routes.length === 0) {
+        throw new Error('No route found');
+      }
+
+      const route = data.routes[0];
+      const points = route.legs[0].points;
+      
+      const coordinates = points.map((point: { latitude: number; longitude: number }) => [
+        point.longitude,
+        point.latitude
+      ]);
+
+      const routeGeoJSON = {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: coordinates
+        }
+      };
+
+      const routeId = 'route-' + Date.now();
+      routeLayerRef.current = routeId;
+
+      mapInstanceRef.current.addSource(routeId, {
+        type: 'geojson',
+        data: routeGeoJSON
+      });
+
+      mapInstanceRef.current.addLayer({
+        id: routeId,
+        type: 'line',
+        source: routeId,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#3b82f6',
+          'line-width': 6,
+          'line-opacity': 0.8
+        }
+      });
+
+      addUserMarker(startLat, startLng);
+      addHospitalMarker(hospital);
+
+      const bounds = new window.tt.LngLatBounds();
+      coordinates.forEach((coord: [number, number]) => bounds.extend(coord));
+      bounds.extend([startLng, startLat]);
+      bounds.extend([hospital.lng, hospital.lat]);
+
+      mapInstanceRef.current.fitBounds(bounds, {
+        padding: { top: 60, bottom: 60, left: 40, right: 40 },
+        duration: 1000
+      });
+
+      const summary = route.summary;
+      const distanceKm = (summary.lengthInMeters / 1000).toFixed(1);
+      const durationMinutes = Math.round(summary.travelTimeInSeconds / 60);
+
+      setRouteInfo({
+        distance: `${distanceKm} km`,
+        duration: durationMinutes < 60 
+          ? `${durationMinutes} min` 
+          : `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`,
+        hospitalName: hospital.name
+      });
+
+      setShowingRoute(true);
+      toast.success('Route calculated successfully!');
+
+    } catch (error) {
+      console.error('Route calculation error:', error);
+      toast.error('Failed to calculate route. Please try again.');
+    } finally {
+      setIsRouteLoading(false);
+    }
+  };
+
+  const handleGetDirections = (hospital: Hospital) => {
+    setIsRouteLoading(true);
+
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      setIsRouteLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+        drawRoute(hospital, latitude, longitude);
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        setIsRouteLoading(false);
+        
+        if (error.code === error.PERMISSION_DENIED) {
+          toast.error('Location permission denied. Please enable location access to get directions.');
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          toast.error('Location unavailable. Please try again.');
+        } else {
+          toast.error('Unable to get your location. Please try again.');
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    );
   };
 
   useEffect(() => {
-    if (selectedHospital && mapInstanceRef.current) {
-      addMarker(selectedHospital);
+    if (selectedHospital && mapInstanceRef.current && !showingRoute) {
+      clearRoute();
+      addHospitalMarker(selectedHospital);
+      mapInstanceRef.current.flyTo({
+        center: [selectedHospital.lng, selectedHospital.lat],
+        zoom: 15,
+        duration: 1000,
+      });
     }
   }, [selectedHospital]);
 
@@ -268,10 +468,10 @@ const HospitalMap: React.FC = () => {
     }
     
     setIsLoading(true);
+    clearRoute();
     
     if (tomtomApiKey) {
       try {
-        // Use TomTom Search API to find hospitals near the searched location
         const searchQuery = encodeURIComponent(manualLocation);
         const geocodeResponse = await fetch(
           `https://api.tomtom.com/search/2/geocode/${searchQuery}.json?key=${tomtomApiKey}&limit=1`
@@ -283,7 +483,6 @@ const HospitalMap: React.FC = () => {
             const { lat, lon } = geocodeData.results[0].position;
             setUserLocation({ lat, lng: lon });
             
-            // Search for hospitals near this location
             const hospitalSearchResponse = await fetch(
               `https://api.tomtom.com/search/2/poiSearch/children%20hospital.json?key=${tomtomApiKey}&lat=${lat}&lon=${lon}&radius=10000&limit=5&categorySet=7321`
             );
@@ -320,39 +519,10 @@ const HospitalMap: React.FC = () => {
       }
     }
     
-    // Fallback to default hospitals
     setHospitals(fallbackHospitals);
     setSelectedHospital(fallbackHospitals[0]);
     setIsLoading(false);
     toast.success(`Showing hospitals near "${manualLocation}"`);
-  };
-
-  const openDirections = (hospital: Hospital) => {
-    const destinationQuery = encodeURIComponent(`${hospital.name}, ${hospital.address}`);
-    
-    let directionsUrl: string;
-    
-    if (userLocation) {
-      directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
-    } else {
-      directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
-    }
-    
-    const newWindow = window.open(directionsUrl, '_blank', 'noopener,noreferrer');
-    
-    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      window.location.href = directionsUrl;
-    }
-  };
-
-  const openGoogleMapsView = (hospital: Hospital) => {
-    const query = encodeURIComponent(hospital.name + ', ' + hospital.address);
-    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-    const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-    
-    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      window.location.href = mapsUrl;
-    }
   };
 
   const callHospital = (phone: string) => {
@@ -362,6 +532,7 @@ const HospitalMap: React.FC = () => {
 
   const handleHospitalSelect = (hospital: Hospital) => {
     setSelectedHospital(hospital);
+    clearRoute();
   };
 
   const renderStars = (rating: number) => {
@@ -458,23 +629,59 @@ const HospitalMap: React.FC = () => {
             <div>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Map className="w-5 h-5 text-primary" />
-                Hospital Location
+                {showingRoute ? 'Route to Hospital' : 'Hospital Location'}
               </CardTitle>
               <CardDescription>
                 {selectedHospital ? selectedHospital.name : 'Select a hospital to view on map'}
               </CardDescription>
             </div>
+            {showingRoute && (
+              <Button variant="ghost" size="sm" onClick={clearRoute} className="gap-1">
+                <X className="w-4 h-4" />
+                Clear Route
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="h-[300px] w-full relative">
+          <div className="h-[350px] w-full relative">
             <div ref={mapRef} className="w-full h-full" />
             {!tomtomApiKey && (
               <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             )}
-            {selectedHospital && (
+            {isRouteLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                  <p className="text-sm font-medium text-foreground">Calculating route...</p>
+                </div>
+              </div>
+            )}
+            
+            {routeInfo && (
+              <div className="absolute top-4 left-4 right-4 bg-background/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-primary/20">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <Car className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm text-foreground">Route to {routeInfo.hospitalName}</p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                        {routeInfo.distance}
+                      </span>
+                      <span className="text-xs bg-status-normal/10 text-status-normal px-2 py-0.5 rounded-full font-medium">
+                        {routeInfo.duration}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {selectedHospital && !showingRoute && (
               <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -483,10 +690,15 @@ const HospitalMap: React.FC = () => {
                   </div>
                   <Button 
                     size="sm" 
-                    onClick={() => openDirections(selectedHospital)}
+                    onClick={() => handleGetDirections(selectedHospital)}
+                    disabled={isRouteLoading}
                     className="flex-shrink-0"
                   >
-                    <Navigation className="w-4 h-4 mr-1" />
+                    {isRouteLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    ) : (
+                      <Navigation className="w-4 h-4 mr-1" />
+                    )}
                     Get Directions
                   </Button>
                 </div>
@@ -559,11 +771,16 @@ const HospitalMap: React.FC = () => {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openDirections(hospital);
+                        handleGetDirections(hospital);
                       }}
+                      disabled={isRouteLoading}
                       className="gap-1.5 flex-1 min-w-[120px]"
                     >
-                      <Navigation className="w-4 h-4" />
+                      {isRouteLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Navigation className="w-4 h-4" />
+                      )}
                       Get Directions
                     </Button>
                     {hospital.phone && (
@@ -580,17 +797,6 @@ const HospitalMap: React.FC = () => {
                         Call Now
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openGoogleMapsView(hospital);
-                      }}
-                      className="text-muted-foreground hover:text-primary"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
                   </div>
                 </div>
               ))}
