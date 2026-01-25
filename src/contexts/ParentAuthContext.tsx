@@ -6,7 +6,7 @@ interface ParentUser {
   babyId: string;
   babyName: string;
   bedNumber: string;
-  parentMobile: string;
+  parentContact: string;
   status: string;
 }
 
@@ -14,7 +14,7 @@ interface ParentAuthContextType {
   parent: ParentUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (bedNumber: string, parentMobile: string) => Promise<{ success: boolean; error?: string }>;
+  login: (babyName: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -38,21 +38,21 @@ export function ParentAuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = useCallback(async (bedNumber: string, parentMobile: string): Promise<{ success: boolean; error?: string }> => {
+  const login = useCallback(async (babyName: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Normalize inputs - trim whitespace and handle case sensitivity
-      const normalizedBedNumber = bedNumber.trim();
-      const normalizedMobile = parentMobile.trim();
+      // Normalize inputs - trim whitespace
+      const normalizedBabyName = babyName.trim();
+      const normalizedPassword = password.trim();
 
-      if (!normalizedBedNumber || !normalizedMobile) {
-        return { success: false, error: 'Please enter both Bed Number and Parent Mobile Number.' };
+      if (!normalizedBabyName || !normalizedPassword) {
+        return { success: false, error: 'Please enter both Baby Name and Password.' };
       }
 
-      // Query baby by bed_number (case-insensitive)
+      // Query baby by baby_name (case-insensitive) and login_password
       const { data: babies, error } = await supabase
         .from('babies')
-        .select('id, baby_name, bed_number, parent_contact, status')
-        .ilike('bed_number', normalizedBedNumber);
+        .select('id, baby_name, bed_number, parent_contact, status, login_password')
+        .ilike('baby_name', normalizedBabyName);
 
       if (error) {
         console.error('Database query error:', error);
@@ -60,38 +60,23 @@ export function ParentAuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!babies || babies.length === 0) {
-        return { success: false, error: 'No baby found with this Bed Number. Please verify the information provided at discharge.' };
+        return { success: false, error: 'No baby found with this name. Please verify the information provided by the hospital.' };
       }
 
-      // Find exact match for mobile number
+      // Find exact match for password
       const matchingBaby = babies.find(baby => {
-        // Extract mobile from parent_contact - support various formats
-        const storedContact = baby.parent_contact.trim();
-        
-        // Direct match check (case-insensitive for email format, exact for mobile)
-        if (storedContact === normalizedMobile) {
-          return true;
+        const storedPassword = (baby as any).login_password;
+        if (!storedPassword) {
+          return false;
         }
-        
-        // Clean phone numbers by removing non-digit characters for comparison
-        const cleanStored = storedContact.replace(/\D/g, '');
-        const cleanInput = normalizedMobile.replace(/\D/g, '');
-        
-        // Match if cleaned numbers are equal (handles formatting differences)
-        if (cleanStored.length > 0 && cleanInput.length > 0) {
-          // Handle Indian phone numbers - could be with or without country code
-          if (cleanStored === cleanInput) return true;
-          if (cleanStored.endsWith(cleanInput) && cleanInput.length >= 10) return true;
-          if (cleanInput.endsWith(cleanStored) && cleanStored.length >= 10) return true;
-        }
-        
-        return false;
+        // Exact password match (case-sensitive)
+        return storedPassword === normalizedPassword;
       });
 
       if (!matchingBaby) {
         return { 
           success: false, 
-          error: 'Parent Mobile Number does not match our records for this Bed Number. Please check and try again.' 
+          error: 'Password does not match our records. Please check the password provided by the hospital.' 
         };
       }
 
@@ -100,7 +85,7 @@ export function ParentAuthProvider({ children }: { children: ReactNode }) {
         babyId: matchingBaby.id,
         babyName: matchingBaby.baby_name,
         bedNumber: matchingBaby.bed_number,
-        parentMobile: matchingBaby.parent_contact,
+        parentContact: matchingBaby.parent_contact,
         status: matchingBaby.status || 'normal',
       };
 
