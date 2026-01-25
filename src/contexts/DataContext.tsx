@@ -78,6 +78,21 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 // Store vitals history in memory (simulated real-time data)
 const vitalsHistory: Record<string, VitalSigns[]> = {};
 
+// Track mock data rotation - cycle through different alert scenarios
+let mockScenarioIndex = 0;
+const MOCK_SCENARIOS = [
+  'heart_rate_high',
+  'heart_rate_low', 
+  'respiration_high',
+  'respiration_low',
+  'temperature_high',
+  'temperature_low',
+  'spo2_low',
+  'prone_position',
+  'normal',
+  'side_position',
+] as const;
+
 // PhysioNet Neonatal Thresholds for three-tier alert system
 // Normal: All vitals within safe range
 // High Priority (Early Warning): Vitals approaching abnormal limits
@@ -120,31 +135,63 @@ const VITAL_THRESHOLDS = {
 const lastAlertTime: Record<string, number> = {};
 const ALERT_COOLDOWN = 30000; // 30 seconds between alerts for same baby
 
-// Generate realistic vital signs based on PhysioNet neonatal ranges
-function generateVitals(babyId: string, status: BabyStatus): VitalSigns {
-  // Normal neonatal ranges based on PhysioNet datasets
-  const baseHeartRate = status === 'critical' ? 170 : status === 'high' ? 155 : 130;
-  const baseRespirationRate = status === 'critical' ? 65 : status === 'high' ? 55 : 42;
-  const baseSpo2 = status === 'critical' ? 88 : status === 'high' ? 92 : 97;
-  const baseTemp = status === 'critical' ? 37.8 : status === 'high' ? 37.5 : 36.8;
-  const baseMovement = status === 'critical' ? 20 : status === 'high' ? 35 : 50;
+// Generate realistic vital signs based on mock scenario rotation
+// This ensures ALL vital types trigger alerts over time
+function generateVitals(babyId: string, _status: BabyStatus): VitalSigns {
+  // Get current scenario for this cycle
+  const scenario = MOCK_SCENARIOS[mockScenarioIndex % MOCK_SCENARIOS.length];
   
-  const positions: ('back' | 'side' | 'prone')[] = ['back', 'side', 'prone'];
-  const positionWeights = status === 'critical' ? [0.3, 0.3, 0.4] : [0.7, 0.2, 0.1];
-  const randomVal = Math.random();
-  let position: 'back' | 'side' | 'prone' = 'back';
-  if (randomVal < positionWeights[0]) position = 'back';
-  else if (randomVal < positionWeights[0] + positionWeights[1]) position = 'side';
-  else position = 'prone';
+  // Base normal values
+  let heartRate = 130 + Math.round((Math.random() - 0.5) * 20);
+  let respirationRate = 42 + Math.round((Math.random() - 0.5) * 10);
+  let spo2 = 97 + Math.round((Math.random() - 0.5) * 2);
+  let temperature = 36.8 + parseFloat(((Math.random() - 0.5) * 0.3).toFixed(1));
+  let movement = 50 + Math.round((Math.random() - 0.5) * 20);
+  let sleepingPosition: 'back' | 'side' | 'prone' = 'back';
+  
+  // Apply scenario-specific abnormal values
+  switch (scenario) {
+    case 'heart_rate_high':
+      heartRate = 165 + Math.round(Math.random() * 10); // Critical: >160
+      break;
+    case 'heart_rate_low':
+      heartRate = 75 + Math.round(Math.random() * 4); // Critical: <80
+      break;
+    case 'respiration_high':
+      respirationRate = 62 + Math.round(Math.random() * 5); // Critical: >60
+      break;
+    case 'respiration_low':
+      respirationRate = 25 + Math.round(Math.random() * 4); // Critical: <30
+      break;
+    case 'temperature_high':
+      temperature = 37.7 + parseFloat((Math.random() * 0.4).toFixed(1)); // Critical: >37.5
+      break;
+    case 'temperature_low':
+      temperature = 35.5 + parseFloat((Math.random() * 0.4).toFixed(1)); // Critical: <36.0
+      break;
+    case 'spo2_low':
+      spo2 = 85 + Math.round(Math.random() * 4); // Critical: <90
+      break;
+    case 'prone_position':
+      sleepingPosition = 'prone';
+      break;
+    case 'side_position':
+      sleepingPosition = 'side';
+      break;
+    case 'normal':
+    default:
+      // All values stay normal
+      break;
+  }
 
   return {
     timestamp: Date.now(),
-    heartRate: Math.round(baseHeartRate + (Math.random() - 0.5) * 30),
-    respirationRate: Math.round(baseRespirationRate + (Math.random() - 0.5) * 15),
-    spo2: Math.round(baseSpo2 + (Math.random() - 0.5) * 4),
-    temperature: parseFloat((baseTemp + (Math.random() - 0.5) * 0.6).toFixed(1)),
-    movement: Math.round(baseMovement + (Math.random() - 0.5) * 20),
-    sleepingPosition: position,
+    heartRate,
+    respirationRate,
+    spo2,
+    temperature,
+    movement,
+    sleepingPosition,
   };
 }
 
@@ -471,6 +518,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [fetchBabyRecipients]);
 
+  // Rotate mock scenario every 30 seconds to test different alert types
+  useEffect(() => {
+    const rotationInterval = setInterval(() => {
+      mockScenarioIndex = (mockScenarioIndex + 1) % MOCK_SCENARIOS.length;
+      console.log(`Mock scenario rotated to: ${MOCK_SCENARIOS[mockScenarioIndex]}`);
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(rotationInterval);
+  }, []);
+
   // Update vitals every 3 seconds and check for automatic alerts
   useEffect(() => {
     const interval = setInterval(() => {
@@ -484,10 +541,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
           vitalsHistory[baby.id].shift();
         }
 
-        // Check thresholds and trigger automatic alerts
+        // Check thresholds and trigger automatic alerts for ALL vital types
         if (alertsEnabledRef.current[baby.id]) {
           const { level, reasons } = checkVitalThresholds(newVitals);
           if (level !== 'normal' && reasons.length > 0) {
+            console.log(`Alert triggered for ${baby.name}:`, reasons);
             sendAutoAlertEmail(baby, newVitals, level, reasons);
           }
         }
