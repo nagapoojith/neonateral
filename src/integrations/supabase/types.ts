@@ -149,6 +149,7 @@ export type Database = {
           date_of_birth: string
           id: string
           last_alert_sent_at: string | null
+          login_password: string | null
           parent_contact: string
           parent_names: string
           registered_by: string | null
@@ -163,6 +164,7 @@ export type Database = {
           date_of_birth: string
           id?: string
           last_alert_sent_at?: string | null
+          login_password?: string | null
           parent_contact: string
           parent_names: string
           registered_by?: string | null
@@ -177,6 +179,7 @@ export type Database = {
           date_of_birth?: string
           id?: string
           last_alert_sent_at?: string | null
+          login_password?: string | null
           parent_contact?: string
           parent_names?: string
           registered_by?: string | null

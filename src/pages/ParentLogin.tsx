@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Heart, Baby, MessageCircle, MapPin, AlertTriangle, Phone, BedDouble } from 'lucide-react';
+import { Heart, Baby, MessageCircle, MapPin, AlertTriangle, Lock, User } from 'lucide-react';
 
 const ParentLogin = () => {
-  const [bedNumber, setBedNumber] = useState('');
-  const [parentMobile, setParentMobile] = useState('');
+  const [babyName, setBabyName] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useParentAuth();
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ const ParentLogin = () => {
     setIsLoading(true);
 
     try {
-      const result = await login(bedNumber, parentMobile);
+      const result = await login(babyName, password);
 
       if (result.success) {
         toast({
@@ -129,45 +129,45 @@ const ParentLogin = () => {
             <CardHeader className="space-y-2 pb-6 text-center">
               <CardTitle className="text-2xl font-bold">Welcome, Parent</CardTitle>
               <CardDescription>
-                Enter your baby's bed number and your registered mobile number to access the care portal
+                Enter your baby's name and the password provided by the hospital to access the care portal
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="bedNumber" className="text-sm font-medium flex items-center gap-2">
-                    <BedDouble className="w-4 h-4 text-muted-foreground" />
-                    Baby Bed Number
+                  <Label htmlFor="babyName" className="text-sm font-medium flex items-center gap-2">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    Baby Name
                   </Label>
                   <Input
-                    id="bedNumber"
+                    id="babyName"
                     type="text"
-                    placeholder="e.g., NICU-101"
-                    value={bedNumber}
-                    onChange={(e) => setBedNumber(e.target.value)}
+                    placeholder="e.g., Poojith"
+                    value={babyName}
+                    onChange={(e) => setBabyName(e.target.value)}
                     required
                     className="h-12 rounded-xl border-border/60 focus:border-primary"
                   />
                   <p className="text-xs text-muted-foreground">
-                    The bed number assigned to your baby in the hospital
+                    Your baby's name as registered in the hospital
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="parentMobile" className="text-sm font-medium flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    Parent Mobile Number
+                  <Label htmlFor="password" className="text-sm font-medium flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-muted-foreground" />
+                    Password
                   </Label>
                   <Input
-                    id="parentMobile"
-                    type="tel"
-                    placeholder="e.g., 9876543210"
-                    value={parentMobile}
-                    onChange={(e) => setParentMobile(e.target.value)}
+                    id="password"
+                    type="password"
+                    placeholder="Enter password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
                     className="h-12 rounded-xl border-border/60 focus:border-primary"
                   />
                   <p className="text-xs text-muted-foreground">
-                    The mobile number registered during baby admission
+                    The password provided by the doctor at discharge
                   </p>
                 </div>
                 <Button
@@ -183,7 +183,7 @@ const ParentLogin = () => {
               <div className="mt-8 p-4 rounded-xl bg-accent/50 border border-accent">
                 <p className="text-sm font-medium text-accent-foreground mb-1">Need help?</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Contact the hospital if you don't remember your baby's bed number or if your mobile number has changed since registration.
+                  Contact the hospital if you don't have the password. The password was provided by the doctor during discharge.
                 </p>
               </div>
             </CardContent>
