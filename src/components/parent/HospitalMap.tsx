@@ -327,16 +327,32 @@ const HospitalMap: React.FC = () => {
     toast.success(`Showing hospitals near "${manualLocation}"`);
   };
 
-  const openTomTomDirections = (hospital: Hospital) => {
-    // Always use Google Maps for reliable cross-platform directions
-    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lng}&destination_place_id=${hospital.placeId || ''}&travelmode=driving`;
-    window.open(directionsUrl, '_blank');
+  const openDirections = (hospital: Hospital) => {
+    const destinationQuery = encodeURIComponent(`${hospital.name}, ${hospital.address}`);
+    
+    let directionsUrl: string;
+    
+    if (userLocation) {
+      directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
+    } else {
+      directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
+    }
+    
+    const newWindow = window.open(directionsUrl, '_blank', 'noopener,noreferrer');
+    
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      window.location.href = directionsUrl;
+    }
   };
 
   const openGoogleMapsView = (hospital: Hospital) => {
     const query = encodeURIComponent(hospital.name + ', ' + hospital.address);
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-    window.open(mapsUrl, '_blank');
+    const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+    
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      window.location.href = mapsUrl;
+    }
   };
 
   const callHospital = (phone: string) => {
@@ -467,7 +483,7 @@ const HospitalMap: React.FC = () => {
                   </div>
                   <Button 
                     size="sm" 
-                    onClick={() => openTomTomDirections(selectedHospital)}
+                    onClick={() => openDirections(selectedHospital)}
                     className="flex-shrink-0"
                   >
                     <Navigation className="w-4 h-4 mr-1" />
@@ -543,7 +559,7 @@ const HospitalMap: React.FC = () => {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openTomTomDirections(hospital);
+                        openDirections(hospital);
                       }}
                       className="gap-1.5 flex-1 min-w-[120px]"
                     >
