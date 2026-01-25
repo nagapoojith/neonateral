@@ -329,6 +329,7 @@ const HospitalMap: React.FC = () => {
 
   const openDirections = (hospital: Hospital) => {
     // Use Google Maps with user's current location as origin for reliable navigation
+    // IMPORTANT: Use window.open with noopener,noreferrer to avoid ERR_BLOCKED_BY_RESPONSE
     let directionsUrl: string;
     
     if (userLocation) {
@@ -339,12 +340,20 @@ const HospitalMap: React.FC = () => {
       directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
     }
     
-    window.open(directionsUrl, '_blank');
+    // Open in new window/tab - this avoids iframe blocking issues
+    const newWindow = window.open(directionsUrl, '_blank', 'noopener,noreferrer');
+    if (!newWindow) {
+      // Fallback: If popup blocked, try direct navigation
+      window.location.href = directionsUrl;
+    }
   };
 
   const openGoogleMapsView = (hospital: Hospital) => {
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${hospital.lat},${hospital.lng}`;
-    window.open(mapsUrl, '_blank');
+    const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+    if (!newWindow) {
+      window.location.href = mapsUrl;
+    }
   };
 
   const callHospital = (phone: string) => {
