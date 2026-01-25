@@ -490,8 +490,8 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
           <!-- Footer - Dark Teal -->
           <tr>
             <td style="background: linear-gradient(135deg, #0d4f5f 0%, #0f766e 100%); padding: 22px 24px; text-align: center;">
-              <p style="color: #ffffff; margin: 0; font-size: 15px; font-weight: 600;">NeoGuard NICU Monitoring System</p>
-              <p style="color: rgba(255,255,255,0.75); margin: 8px 0 0 0; font-size: 12px;">This is an automated medical alert. Please do not reply to this email.</p>
+              <p style="color: rgba(255,255,255,0.75); margin: 0; font-size: 12px;">This is an automated medical alert. Please do not reply to this email.</p>
+              <p style="color: rgba(255,255,255,0.6); margin: 10px 0 0 0; font-size: 11px;">© 2026 Hospital Systems</p>
             </td>
           </tr>
 

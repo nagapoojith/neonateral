@@ -417,10 +417,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, level: AlertLevel, reasons: string[]) => {
-    // Only send email alerts for CRITICAL level - High Priority only shows dashboard warning
-    if (level !== 'critical') {
-      console.log(`Alert level ${level} for ${baby.name} - no email sent (only CRITICAL triggers email)`);
+const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, level: AlertLevel, reasons: string[]) => {
+    // Send email alerts for both CRITICAL and HIGH PRIORITY levels
+    if (level === 'normal') {
+      console.log(`Alert level ${level} for ${baby.name} - no email sent (only CRITICAL and HIGH PRIORITY trigger emails)`);
       return;
     }
 
@@ -439,7 +439,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     lastAlertTime[baby.id] = now;
     const triggerReason = reasons.join('; ');
-    const message = `CRITICAL ALERT: ${triggerReason}`;
+    const alertLabel = level === 'critical' ? 'CRITICAL' : 'HIGH PRIORITY';
+    const message = `${alertLabel} ALERT: ${triggerReason}`;
 
     try {
       const { data: alertData, error: alertError } = await supabase
