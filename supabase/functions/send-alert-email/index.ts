@@ -89,6 +89,17 @@ const getAbnormalVitals = (vitals?: AlertEmailRequest["vitals"]): string[] => {
   return abnormals;
 };
 
+const getAlertTypeBadge = (alertType: string): { label: string; bgColor: string; textColor: string } => {
+  switch (alertType) {
+    case "critical":
+      return { label: "CRITICAL", bgColor: "#dc2626", textColor: "#ffffff" };
+    case "high":
+      return { label: "WARNING", bgColor: "#f59e0b", textColor: "#ffffff" };
+    default:
+      return { label: "NORMAL", bgColor: "#059669", textColor: "#ffffff" };
+  }
+};
+
 async function generateAIContent(request: AlertEmailRequest, apiKey: string): Promise<GeneratedContent> {
   console.log("Generating AI content for alert...");
 
@@ -188,9 +199,11 @@ function generateFallbackContent(request: AlertEmailRequest, abnormalVitals: str
 
 function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent): string {
   const hrStatus = getVitalStatus("heartRate", request.vitals?.heartRate);
+  const rrStatus = getVitalStatus("respirationRate", request.vitals?.respirationRate);
   const spo2Status = getVitalStatus("spo2", request.vitals?.spo2);
   const tempStatus = getVitalStatus("temperature", request.vitals?.temperature);
   const posInfo = getPositionInfo(request.vitals?.sleepingPosition);
+  const alertBadge = getAlertTypeBadge(request.alertType);
 
   const createVitalCard = (
     icon: string,
@@ -334,14 +347,14 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
             </td>
           </tr>
 
-          <!-- CRITICAL ALERT BANNER - Red Background -->
+          <!-- ALERT TYPE BADGE BANNER -->
           <tr>
-            <td style="background: #dc2626; padding: 24px 24px; text-align: center;">
+            <td style="background: ${alertBadge.bgColor}; padding: 24px 24px; text-align: center;">
               <div style="margin-bottom: 8px;">
                 <span style="font-size: 32px;">🚨</span>
               </div>
-              <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">CRITICAL PRIORITY</p>
-              <h2 style="color: #ffffff; margin: 10px 0 0 0; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">IMMEDIATE ATTENTION REQUIRED</h2>
+              <span style="display: inline-block; padding: 10px 28px; background: rgba(255,255,255,0.2); color: ${alertBadge.textColor}; font-size: 18px; font-weight: 800; border-radius: 30px; text-transform: uppercase; letter-spacing: 3px; border: 2px solid rgba(255,255,255,0.4);">${alertBadge.label}</span>
+              <h2 style="color: #ffffff; margin: 14px 0 0 0; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">IMMEDIATE ATTENTION REQUIRED</h2>
             </td>
           </tr>
 
@@ -385,8 +398,10 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
                       </tr>
                       <tr>
                         <td width="50%" style="padding: 12px 0 0 0; vertical-align: top;">
-                          <p style="color: #94a3b8; margin: 0; font-size: 12px; font-weight: 500;">Patient ID</p>
-                          <p style="color: #475569; margin: 6px 0 0 0; font-size: 14px; font-weight: 600;">${request.babyId || 'N/A'}</p>
+                          <p style="color: #94a3b8; margin: 0; font-size: 12px; font-weight: 500;">Alert Type</p>
+                          <p style="margin: 6px 0 0 0;">
+                            <span style="display: inline-block; padding: 6px 16px; background: ${alertBadge.bgColor}; color: ${alertBadge.textColor}; font-size: 13px; font-weight: 700; border-radius: 20px; text-transform: uppercase;">${alertBadge.label}</span>
+                          </p>
                         </td>
                         <td width="50%" style="padding: 12px 0 0 0; vertical-align: top;">
                           <p style="color: #94a3b8; margin: 0; font-size: 12px; font-weight: 500;">Alert Time</p>
@@ -409,7 +424,8 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
               
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 ${createVitalCard("❤️", "#fef2f2", "Heart Rate", request.vitals?.heartRate, "BPM", "120-160", hrStatus)}
-                ${createVitalCard("💧", "#ecfdf5", "Oxygen Saturation", request.vitals?.spo2, "%", "95-100%", spo2Status)}
+                ${createVitalCard("🫁", "#eff6ff", "Respiration Rate", request.vitals?.respirationRate, "/min", "35-55", rrStatus)}
+                ${createVitalCard("💧", "#ecfdf5", "Oxygen Saturation (SpO₂)", request.vitals?.spo2, "%", "95-100%", spo2Status)}
                 ${createVitalCard("🌡️", "#fff7ed", "Body Temperature", request.vitals?.temperature, "°C", "36.5-37.5°C", tempStatus)}
                 ${createPositionCard()}
                 ${createMovementCard()}
@@ -434,20 +450,20 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
             </td>
           </tr>
 
-          <!-- Recommended Actions - Light Green Background -->
+          <!-- Recommended Actions - RED Background -->
           <tr>
             <td style="padding: 24px 24px 0;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fef2f2; border-radius: 12px; border: 1px solid #fecaca;">
                 <tr>
                   <td style="padding: 20px;">
-                    <p style="color: #15803d; margin: 0 0 16px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                    <p style="color: #dc2626; margin: 0 0 16px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
                       🚨 RECOMMENDED ACTIONS
                     </p>
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       ${content.recommendations.map((rec, i) => `
                         <tr>
                           <td style="padding: 10px 0;">
-                            <p style="color: #374151; margin: 0; font-size: 14px; line-height: 1.6;">${rec}</p>
+                            <p style="color: #b91c1c; margin: 0; font-size: 14px; line-height: 1.6; font-weight: 500;">${rec}</p>
                           </td>
                         </tr>
                       `).join("")}
@@ -512,7 +528,8 @@ serve(async (req) => {
 
     const htmlContent = generateEmailHTML(request, content);
 
-    const subject = `🚨 [CRITICAL] NICU ALERT | Baby ${request.babyName} | Bed ${request.bedNumber}`;
+    const alertBadge = getAlertTypeBadge(request.alertType);
+    const subject = `🚨 [${alertBadge.label}] NICU ALERT | Baby ${request.babyName} | Bed ${request.bedNumber}`;
 
     const emailPayload = {
       sender: { name: "NeoGuard NICU", email: "nagapoojithtn@gmail.com" },

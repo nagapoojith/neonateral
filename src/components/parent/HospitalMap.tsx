@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Navigation, Phone, Clock, Loader2, Search, ExternalLink, AlertTriangle, Star, Map } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Hospital {
   id: string;
@@ -28,7 +29,11 @@ const HospitalMap: React.FC = () => {
   const [manualLocation, setManualLocation] = useState('');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 13.0569, lng: 80.2425 });
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [tomtomApiKey, setTomtomApiKey] = useState<string | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
 
   const fallbackHospitals: Hospital[] = [
     {
@@ -103,6 +108,123 @@ const HospitalMap: React.FC = () => {
     },
   ];
 
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-tomtom-key');
+        if (error) {
+          console.error('Error fetching TomTom key:', error);
+          return;
+        }
+        if (data?.apiKey) {
+          setTomtomApiKey(data.apiKey);
+        }
+      } catch (err) {
+        console.error('Failed to fetch TomTom API key:', err);
+      }
+    };
+    fetchApiKey();
+  }, []);
+
+  useEffect(() => {
+    if (!tomtomApiKey || mapLoaded) return;
+
+    const loadTomTomSDK = () => {
+      if (window.tt) {
+        initializeMap();
+        return;
+      }
+
+      const linkElement = document.createElement('link');
+      linkElement.rel = 'stylesheet';
+      linkElement.type = 'text/css';
+      linkElement.href = 'https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps.css';
+      document.head.appendChild(linkElement);
+
+      const script = document.createElement('script');
+      script.src = 'https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js';
+      script.async = true;
+      script.onload = () => {
+        initializeMap();
+      };
+      document.head.appendChild(script);
+    };
+
+    const initializeMap = () => {
+      if (!mapRef.current || !window.tt || mapInstanceRef.current) return;
+
+      const hospital = selectedHospital || fallbackHospitals[0];
+      
+      mapInstanceRef.current = window.tt.map({
+        key: tomtomApiKey,
+        container: mapRef.current,
+        center: [hospital.lng, hospital.lat],
+        zoom: 15,
+        style: 'https://api.tomtom.com/style/1/style/22.2.1-*?map=basic_main&poi=poi_main',
+      });
+
+      mapInstanceRef.current.addControl(new window.tt.NavigationControl());
+      
+      addMarker(hospital);
+      setMapLoaded(true);
+    };
+
+    loadTomTomSDK();
+  }, [tomtomApiKey, mapLoaded]);
+
+  const addMarker = (hospital: Hospital) => {
+    if (!mapInstanceRef.current || !window.tt) return;
+
+    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current = [];
+
+    const markerElement = document.createElement('div');
+    markerElement.className = 'custom-marker';
+    markerElement.innerHTML = `
+      <div style="
+        background: #dc2626;
+        width: 40px;
+        height: 40px;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        border: 3px solid white;
+      ">
+        <span style="transform: rotate(45deg); font-size: 18px;">🏥</span>
+      </div>
+    `;
+
+    const marker = new window.tt.Marker({ element: markerElement })
+      .setLngLat([hospital.lng, hospital.lat])
+      .addTo(mapInstanceRef.current);
+
+    const popup = new window.tt.Popup({ offset: 30 })
+      .setHTML(`
+        <div style="padding: 8px; min-width: 200px;">
+          <h3 style="margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">${hospital.name}</h3>
+          <p style="margin: 0; font-size: 12px; color: #666;">${hospital.address}</p>
+        </div>
+      `);
+    
+    marker.setPopup(popup);
+    markersRef.current.push(marker);
+
+    mapInstanceRef.current.flyTo({
+      center: [hospital.lng, hospital.lat],
+      zoom: 16,
+      duration: 1000,
+    });
+  };
+
+  useEffect(() => {
+    if (selectedHospital && mapInstanceRef.current) {
+      addMarker(selectedHospital);
+    }
+  }, [selectedHospital]);
+
   const getCurrentLocation = useCallback(() => {
     setIsLoading(true);
     setLocationError(null);
@@ -122,7 +244,6 @@ const HospitalMap: React.FC = () => {
         setIsLoading(false);
         setHospitals(fallbackHospitals);
         setSelectedHospital(fallbackHospitals[0]);
-        setMapCenter({ lat: fallbackHospitals[0].lat, lng: fallbackHospitals[0].lng });
         toast.success('Location found! Showing nearby hospitals.');
       },
       (error) => {
@@ -131,7 +252,6 @@ const HospitalMap: React.FC = () => {
         setIsLoading(false);
         setHospitals(fallbackHospitals);
         setSelectedHospital(fallbackHospitals[0]);
-        setMapCenter({ lat: fallbackHospitals[0].lat, lng: fallbackHospitals[0].lng });
       },
       {
         enableHighAccuracy: true,
@@ -150,23 +270,21 @@ const HospitalMap: React.FC = () => {
     setTimeout(() => {
       setHospitals(fallbackHospitals);
       setSelectedHospital(fallbackHospitals[0]);
-      setMapCenter({ lat: fallbackHospitals[0].lat, lng: fallbackHospitals[0].lng });
       setIsLoading(false);
       toast.success(`Showing hospitals near "${manualLocation}"`);
     }, 800);
   };
 
-  const openGoogleMapsDirections = (hospital: Hospital) => {
-    const destination = encodeURIComponent(hospital.name + ', ' + hospital.address);
-    let mapsUrl: string;
-
+  const openTomTomDirections = (hospital: Hospital) => {
+    let routeUrl: string;
+    
     if (userLocation) {
-      mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${destination}&travelmode=driving`;
+      routeUrl = `https://www.tomtom.com/goto?start=${userLocation.lat},${userLocation.lng}&end=${hospital.lat},${hospital.lng}&mode=car`;
     } else {
-      mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+      routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
     }
-
-    window.open(mapsUrl, '_blank');
+    
+    window.open(routeUrl, '_blank');
   };
 
   const openGoogleMapsView = (hospital: Hospital) => {
@@ -182,7 +300,6 @@ const HospitalMap: React.FC = () => {
 
   const handleHospitalSelect = (hospital: Hospital) => {
     setSelectedHospital(hospital);
-    setMapCenter({ lat: hospital.lat, lng: hospital.lng });
   };
 
   const renderStars = (rating: number) => {
@@ -202,17 +319,6 @@ const HospitalMap: React.FC = () => {
     }
 
     return stars;
-  };
-
-  const getMapEmbedUrl = () => {
-    const hospital = selectedHospital || fallbackHospitals[0];
-    const lat = hospital.lat;
-    const lng = hospital.lng;
-    const zoom = 16;
-    
-    // Using OpenStreetMap embed with marker on exact hospital location
-    const bbox = `${lng - 0.008},${lat - 0.005},${lng + 0.008},${lat + 0.005}`;
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
   };
 
   useEffect(() => {
@@ -300,13 +406,12 @@ const HospitalMap: React.FC = () => {
         </CardHeader>
         <CardContent className="p-0">
           <div className="h-[300px] w-full relative">
-            <iframe
-              title="Hospital Location Map"
-              src={getMapEmbedUrl()}
-              className="w-full h-full border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
+            <div ref={mapRef} className="w-full h-full" />
+            {!tomtomApiKey && (
+              <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            )}
             {selectedHospital && (
               <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border">
                 <div className="flex items-center justify-between gap-3">
@@ -316,7 +421,7 @@ const HospitalMap: React.FC = () => {
                   </div>
                   <Button 
                     size="sm" 
-                    onClick={() => openGoogleMapsDirections(selectedHospital)}
+                    onClick={() => openTomTomDirections(selectedHospital)}
                     className="flex-shrink-0"
                   >
                     <Navigation className="w-4 h-4 mr-1" />
@@ -392,7 +497,7 @@ const HospitalMap: React.FC = () => {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openGoogleMapsDirections(hospital);
+                        openTomTomDirections(hospital);
                       }}
                       className="gap-1.5 flex-1 min-w-[120px]"
                     >
@@ -434,5 +539,11 @@ const HospitalMap: React.FC = () => {
     </div>
   );
 };
+
+declare global {
+  interface Window {
+    tt: any;
+  }
+}
 
 export default HospitalMap;
