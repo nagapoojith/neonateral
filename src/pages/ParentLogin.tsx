@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Heart, Baby, MessageCircle, MapPin, AlertTriangle } from 'lucide-react';
+import { Heart, Baby, MessageCircle, MapPin, AlertTriangle, Phone, BedDouble } from 'lucide-react';
 
 const ParentLogin = () => {
-  const [parentContact, setParentContact] = useState('');
-  const [babyId, setBabyId] = useState('');
+  const [bedNumber, setBedNumber] = useState('');
+  const [parentMobile, setParentMobile] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useParentAuth();
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ const ParentLogin = () => {
     setIsLoading(true);
 
     try {
-      const result = await login(parentContact, babyId);
+      const result = await login(bedNumber, parentMobile);
 
       if (result.success) {
         toast({
@@ -129,36 +129,45 @@ const ParentLogin = () => {
             <CardHeader className="space-y-2 pb-6 text-center">
               <CardTitle className="text-2xl font-bold">Welcome, Parent</CardTitle>
               <CardDescription>
-                Enter your contact info and baby ID to access the care portal
+                Enter your baby's bed number and your registered mobile number to access the care portal
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="parentContact" className="text-sm font-medium">Parent Contact (Email/Phone)</Label>
+                  <Label htmlFor="bedNumber" className="text-sm font-medium flex items-center gap-2">
+                    <BedDouble className="w-4 h-4 text-muted-foreground" />
+                    Baby Bed Number
+                  </Label>
                   <Input
-                    id="parentContact"
+                    id="bedNumber"
                     type="text"
-                    placeholder="your@email.com or phone number"
-                    value={parentContact}
-                    onChange={(e) => setParentContact(e.target.value)}
-                    required
-                    className="h-12 rounded-xl border-border/60 focus:border-primary"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="babyId" className="text-sm font-medium">Baby ID</Label>
-                  <Input
-                    id="babyId"
-                    type="text"
-                    placeholder="Enter your baby's unique ID"
-                    value={babyId}
-                    onChange={(e) => setBabyId(e.target.value)}
+                    placeholder="e.g., NICU-101"
+                    value={bedNumber}
+                    onChange={(e) => setBedNumber(e.target.value)}
                     required
                     className="h-12 rounded-xl border-border/60 focus:border-primary"
                   />
                   <p className="text-xs text-muted-foreground">
-                    This ID was provided to you at discharge
+                    The bed number assigned to your baby in the hospital
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="parentMobile" className="text-sm font-medium flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    Parent Mobile Number
+                  </Label>
+                  <Input
+                    id="parentMobile"
+                    type="tel"
+                    placeholder="e.g., 9876543210"
+                    value={parentMobile}
+                    onChange={(e) => setParentMobile(e.target.value)}
+                    required
+                    className="h-12 rounded-xl border-border/60 focus:border-primary"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The mobile number registered during baby admission
                   </p>
                 </div>
                 <Button
@@ -166,7 +175,7 @@ const ParentLogin = () => {
                   className="w-full h-12 rounded-xl text-base font-semibold gradient-hero hover:opacity-90 transition-opacity mt-2"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Signing in...' : 'Access Portal'}
+                  {isLoading ? 'Verifying...' : 'Access Portal'}
                 </Button>
               </form>
 
@@ -174,7 +183,7 @@ const ParentLogin = () => {
               <div className="mt-8 p-4 rounded-xl bg-accent/50 border border-accent">
                 <p className="text-sm font-medium text-accent-foreground mb-1">Need help?</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Contact the hospital if you don't have your baby's ID or if your contact info has changed.
+                  Contact the hospital if you don't remember your baby's bed number or if your mobile number has changed since registration.
                 </p>
               </div>
             </CardContent>
