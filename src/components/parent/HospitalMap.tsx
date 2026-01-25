@@ -5,6 +5,34 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Navigation, Phone, Clock, Loader2, Search, ExternalLink, AlertTriangle, Star, Map } from 'lucide-react';
 import { toast } from 'sonner';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+const hospitalIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const userIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
 interface Hospital {
   id: string;
@@ -21,6 +49,19 @@ interface Hospital {
   placeId?: string;
 }
 
+interface MapCenterUpdaterProps {
+  center: [number, number];
+  zoom: number;
+}
+
+const MapCenterUpdater: React.FC<MapCenterUpdaterProps> = ({ center, zoom }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+  return null;
+};
+
 const HospitalMap: React.FC = () => {
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,6 +69,8 @@ const HospitalMap: React.FC = () => {
   const [manualLocation, setManualLocation] = useState('');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([13.0827, 80.2707]);
+  const [mapZoom, setMapZoom] = useState(12);
 
   const fallbackHospitals: Hospital[] = [
     {
@@ -117,6 +160,8 @@ const HospitalMap: React.FC = () => {
       (position) => {
         const { latitude, longitude } = position.coords;
         setUserLocation({ lat: latitude, lng: longitude });
+        setMapCenter([latitude, longitude]);
+        setMapZoom(13);
         setIsLoading(false);
         setHospitals(fallbackHospitals);
         toast.success('Location found! Showing nearby hospitals.');
@@ -172,6 +217,12 @@ const HospitalMap: React.FC = () => {
   const callHospital = (phone: string) => {
     const cleanPhone = phone.replace(/\s/g, '');
     window.location.href = `tel:${cleanPhone}`;
+  };
+
+  const handleHospitalSelect = (hospital: Hospital) => {
+    setSelectedHospital(hospital);
+    setMapCenter([hospital.lat, hospital.lng]);
+    setMapZoom(15);
   };
 
   const renderStars = (rating: number) => {
@@ -262,12 +313,78 @@ const HospitalMap: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-lg">
+      <Card className="border-0 shadow-lg overflow-hidden">
         <CardHeader className="pb-3 border-b bg-gradient-to-r from-accent/30 to-primary/5">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Map className="w-5 h-5 text-primary" />
+                Hospital Map
+              </CardTitle>
+              <CardDescription>
+                Interactive map powered by OpenStreetMap
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="h-[300px] w-full">
+            <MapContainer
+              center={mapCenter}
+              zoom={mapZoom}
+              scrollWheelZoom={true}
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <MapCenterUpdater center={mapCenter} zoom={mapZoom} />
+              
+              {userLocation && (
+                <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
+                  <Popup>
+                    <div className="text-center">
+                      <strong>Your Location</strong>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+              
+              {hospitals.map((hospital) => (
+                <Marker 
+                  key={hospital.id} 
+                  position={[hospital.lat, hospital.lng]} 
+                  icon={hospitalIcon}
+                >
+                  <Popup>
+                    <div className="min-w-[200px]">
+                      <h3 className="font-semibold text-sm mb-1">{hospital.name}</h3>
+                      <p className="text-xs text-muted-foreground mb-2">{hospital.address}</p>
+                      <p className="text-xs font-medium text-primary mb-2">{hospital.distance}</p>
+                      <Button 
+                        size="sm" 
+                        className="w-full text-xs"
+                        onClick={() => openGoogleMapsDirections(hospital)}
+                      >
+                        <Navigation className="w-3 h-3 mr-1" />
+                        Get Directions
+                      </Button>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="pb-3 border-b bg-gradient-to-r from-accent/30 to-primary/5">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
                 Nearby Children's Hospitals
               </CardTitle>
               <CardDescription>
@@ -277,7 +394,7 @@ const HospitalMap: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[450px]">
+          <ScrollArea className="h-[350px]">
             <div className="divide-y divide-border/50">
               {hospitals.map((hospital) => (
                 <div
@@ -285,7 +402,7 @@ const HospitalMap: React.FC = () => {
                   className={`p-4 hover:bg-accent/30 transition-all cursor-pointer ${
                     selectedHospital?.id === hospital.id ? 'bg-accent/40' : ''
                   }`}
-                  onClick={() => setSelectedHospital(hospital)}
+                  onClick={() => handleHospitalSelect(hospital)}
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 pr-4">
@@ -367,7 +484,7 @@ const HospitalMap: React.FC = () => {
 
       <div className="text-center py-3">
         <p className="text-xs text-muted-foreground">
-          Powered by Google Maps • Distances are approximate
+          Map powered by OpenStreetMap • Directions via Google Maps • No API key required
         </p>
       </div>
     </div>
