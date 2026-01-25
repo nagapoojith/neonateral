@@ -149,7 +149,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, babyName } = await req.json();
+    const { messages, isGeneralMode } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
@@ -160,7 +160,8 @@ serve(async (req) => {
       );
     }
 
-    const systemPromptWithContext = `${SYSTEM_PROMPT}\n\nYou are currently assisting the parents of a baby named ${babyName || 'the baby'}. Address the baby by name when appropriate to make responses more personal and caring.`;
+    // General mode system prompt - no baby-specific data
+    const systemPromptWithContext = `${SYSTEM_PROMPT}\n\nIMPORTANT: You are operating in GENERAL GUIDANCE MODE. You do NOT have access to any specific baby's medical records or data. Provide general newborn care guidance only. If parents ask about specific test results, vitals, or medical history, politely explain that you can only provide general guidance and they should consult their pediatrician for baby-specific information.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

@@ -19,7 +19,7 @@ interface SymptomTracker {
 }
 
 interface ParentChatbotProps {
-  babyName: string;
+  babyName?: string;
   onShowHospitals: () => void;
 }
 
@@ -52,7 +52,7 @@ const ParentChatbot: React.FC<ParentChatbotProps> = ({ babyName, onShowHospitals
     {
       id: '1',
       role: 'assistant',
-      content: `Hello! I'm your post-discharge care assistant for ${babyName}. I'm here to help answer your questions about newborn care, feeding, sleep, health concerns, and more. How can I help you today?`,
+      content: `Hello! I'm your neonatal care assistant. I'm here to help answer your questions about newborn care, feeding, sleep, hygiene, health concerns, and more.\n\n**Note:** I provide general guidance only and cannot access specific baby records. For personalized medical advice, please consult your pediatrician.\n\nHow can I help you today?`,
       timestamp: new Date(),
     },
   ]);
@@ -145,7 +145,7 @@ const ParentChatbot: React.FC<ParentChatbotProps> = ({ babyName, onShowHospitals
             role: m.role,
             content: m.content,
           })).concat({ role: 'user', content: userMessage }),
-          babyName,
+          isGeneralMode: true, // Indicates this is general guidance, not baby-specific
         }),
       });
 
