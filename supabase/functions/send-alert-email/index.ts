@@ -40,39 +40,21 @@ const getAlertConfig = (type: string) => {
         emoji: "🚨",
         label: "CRITICAL",
         severityText: "IMMEDIATE ATTENTION REQUIRED",
-        colors: { 
-          main: "#dc2626", 
-          bg: "#fef2f2", 
-          border: "#fecaca", 
-          text: "#991b1b",
-          gradient: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)"
-        }
+        colors: { main: "#dc2626", bg: "#fef2f2", border: "#fecaca", text: "#991b1b" }
       };
     case "high":
       return {
         emoji: "⚠️",
         label: "HIGH PRIORITY",
         severityText: "CLOSE MONITORING NEEDED",
-        colors: { 
-          main: "#ea580c", 
-          bg: "#fff7ed", 
-          border: "#fed7aa", 
-          text: "#9a3412",
-          gradient: "linear-gradient(135deg, #ea580c 0%, #c2410c 100%)"
-        }
+        colors: { main: "#ea580c", bg: "#fff7ed", border: "#fed7aa", text: "#9a3412" }
       };
     default:
       return {
         emoji: "ℹ️",
         label: "NORMAL",
         severityText: "ROUTINE CHECK ADVISED",
-        colors: { 
-          main: "#059669", 
-          bg: "#ecfdf5", 
-          border: "#a7f3d0", 
-          text: "#065f46",
-          gradient: "linear-gradient(135deg, #059669 0%, #047857 100%)"
-        }
+        colors: { main: "#059669", bg: "#ecfdf5", border: "#a7f3d0", text: "#065f46" }
       };
   }
 };
@@ -109,10 +91,10 @@ const getVitalStatus = (vital: string, value: number | undefined): { status: str
 
 const getPositionInfo = (position?: string) => {
   switch (position) {
-    case "back": return { label: "Supine (Back)", color: "#059669", bgColor: "#ecfdf5", icon: "✓", isSafe: true };
-    case "side": return { label: "Lateral (Side)", color: "#ea580c", bgColor: "#fff7ed", icon: "⚠", isSafe: false };
-    case "prone": return { label: "Prone (Stomach)", color: "#dc2626", bgColor: "#fef2f2", icon: "⚠", isSafe: false };
-    default: return { label: "Unknown", color: "#6b7280", bgColor: "#f3f4f6", icon: "—", isSafe: true };
+    case "back": return { label: "Supine (Back)", color: "#059669", bgColor: "#ecfdf5", isSafe: true };
+    case "side": return { label: "Lateral (Side)", color: "#ea580c", bgColor: "#fff7ed", isSafe: false };
+    case "prone": return { label: "Prone (Stomach)", color: "#dc2626", bgColor: "#fef2f2", isSafe: false };
+    default: return { label: "Unknown", color: "#6b7280", bgColor: "#f3f4f6", isSafe: true };
   }
 };
 
@@ -133,7 +115,7 @@ const getAbnormalVitals = (vitals?: AlertEmailRequest["vitals"]): string[] => {
   if (spo2.isAbnormal) abnormals.push(`SpO₂: ${vitals.spo2}% (${spo2.status})`);
   
   const pos = getPositionInfo(vitals.sleepingPosition);
-  if (!pos.isSafe) abnormals.push(`Sleeping Position: ${pos.label}`);
+  if (!pos.isSafe) abnormals.push(`Sleeping Position: ${pos.label} ⚠`);
   
   return abnormals;
 };
@@ -162,8 +144,8 @@ Current Readings:
 
 Respond with JSON:
 {
-  "title": "Brief clinical title",
-  "medicalExplanation": "2-3 sentence clinical explanation",
+  "title": "Brief clinical title about the specific vital that triggered the alert",
+  "medicalExplanation": "2-3 sentence clinical explanation of what is happening and why it matters",
   "riskLevel": "${request.alertType === 'critical' ? 'Immediate Attention Required' : 'Close Monitoring Needed'}",
   "recommendations": ["Action 1", "Action 2", "Action 3", "Action 4"],
   "closingMessage": "Professional closing"
@@ -218,14 +200,14 @@ function generateFallbackContent(request: AlertEmailRequest, abnormalVitals: str
       "Immediately assess patient at bedside",
       "Verify vital signs manually with clinical-grade equipment",
       "Check airway, breathing, and circulation (ABC)",
-      "Prepare for potential intervention and notify attending physician"
+      "Document the event, intervention, and infant's response in the patient's chart"
     ] : [
       "Review patient vital signs and trending data",
       "Perform visual clinical assessment",
       "Document observations in patient chart",
       "Continue enhanced monitoring per protocol"
     ],
-    closingMessage: "This is an automated alert from NeoGuard NICU. Verify all findings clinically before intervention."
+    closingMessage: "Prompt intervention is crucial. Please ensure continuous monitoring."
   };
 }
 
@@ -242,36 +224,68 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
   const recommendationsHTML = content.recommendations
     .map((rec, i) => `
       <tr>
-        <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 8px 0; vertical-align: top;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td width="36" valign="top">
-                <div style="width: 28px; height: 28px; border-radius: 50%; background: ${config.colors.gradient}; color: white; font-size: 13px; font-weight: 600; text-align: center; line-height: 28px;">${i + 1}</div>
+              <td width="28" valign="top">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background: #dc2626; color: white; font-size: 12px; font-weight: 600; text-align: center; line-height: 22px;">${i + 1}</div>
               </td>
-              <td style="padding-left: 14px; font-size: 14px; color: #334155; line-height: 1.6;">${rec}</td>
+              <td style="padding-left: 12px; font-size: 14px; color: #374151; line-height: 1.5;">${rec}</td>
             </tr>
           </table>
         </td>
       </tr>
     `).join("");
 
+  // Build vitals outside normal range section
   const abnormalVitalsHTML = abnormalVitals.length > 0 ? `
     <tr>
-      <td style="padding: 24px 32px 0;">
-        <div style="background: ${config.colors.bg}; border: 1px solid ${config.colors.border}; border-left: 4px solid ${config.colors.main}; border-radius: 12px; padding: 20px;">
-          <p style="color: ${config.colors.main}; margin: 0 0 14px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
-            ⚡ Vitals Requiring Attention
+      <td style="padding: 20px 24px 0;">
+        <div style="background: #fffbeb; border: 1px solid #fcd34d; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 16px;">
+          <p style="color: #b45309; margin: 0 0 12px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+            ⚡ VITALS OUTSIDE NORMAL RANGE
           </p>
-          <ul style="margin: 0; padding-left: 18px; color: #1e293b;">
-            ${abnormalVitals.map(v => `<li style="margin: 8px 0; font-size: 14px; font-weight: 500; line-height: 1.5;">${v}</li>`).join("")}
+          <ul style="margin: 0; padding-left: 20px; color: #1f2937;">
+            ${abnormalVitals.map(v => `<li style="margin: 6px 0; font-size: 14px; font-weight: 500;">${v}</li>`).join("")}
           </ul>
         </div>
       </td>
     </tr>
   ` : "";
 
-  const vitalCardStyle = (status: { color: string; bgColor: string }) => 
-    `padding: 16px; background: ${status.bgColor}; border-radius: 12px; border: 1px solid ${status.color}20;`;
+  // Create vital card HTML
+  const createVitalCard = (
+    icon: string, 
+    label: string, 
+    value: string | number | undefined, 
+    unit: string, 
+    normalRange: string, 
+    status: { status: string; color: string; bgColor: string }
+  ) => `
+    <tr>
+      <td style="padding: 8px 0;">
+        <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="36" valign="top">
+                <span style="font-size: 20px;">${icon}</span>
+              </td>
+              <td style="padding-left: 12px;">
+                <p style="margin: 0; color: #6b7280; font-size: 12px;">${label}</p>
+                <p style="margin: 4px 0 0 0; font-size: 22px; font-weight: 700; color: ${status.color};">${value ?? '—'} <span style="font-size: 14px; font-weight: 400;">${unit}</span></p>
+              </td>
+              <td align="right" valign="top">
+                <p style="margin: 0; color: #9ca3af; font-size: 11px;">Normal: ${normalRange}</p>
+                <div style="display: inline-block; margin-top: 6px; padding: 3px 10px; background: ${status.bgColor}; border-radius: 12px;">
+                  <span style="font-size: 11px; font-weight: 600; color: ${status.color};">${status.status}</span>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </td>
+    </tr>
+  `;
 
   return `
 <!DOCTYPE html>
@@ -279,82 +293,72 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>NeoGuard NICU Alert</title>
-  <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
-  <![endif]-->
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc; -webkit-font-smoothing: antialiased;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f3f4f6;">
   
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6;">
     <tr>
-      <td align="center" style="padding: 32px 16px;">
+      <td align="center" style="padding: 24px 16px;">
         
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
           
-          <!-- Logo Header -->
+          <!-- Header with Logo -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #155e75 100%); padding: 28px 32px; text-align: center;">
+            <td style="background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); padding: 24px; text-align: center;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center">
-                    <div style="display: inline-block; width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 16px; line-height: 56px; margin-bottom: 12px;">
-                      <span style="font-size: 28px;">🏥</span>
+                    <div style="display: inline-block; width: 44px; height: 44px; background: rgba(255,255,255,0.15); border-radius: 10px; line-height: 44px; margin-bottom: 8px;">
+                      <span style="font-size: 22px;">🏥</span>
                     </div>
                   </td>
                 </tr>
                 <tr>
                   <td align="center">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">NeoGuard</h1>
-                    <p style="color: rgba(255,255,255,0.85); margin: 6px 0 0 0; font-size: 13px; font-weight: 500;">Neonatal Intensive Care Monitoring</p>
+                    <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">NeoGuard NICU</h1>
+                    <p style="color: rgba(255,255,255,0.8); margin: 4px 0 0 0; font-size: 12px;">Neonatal Monitoring System</p>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Alert Banner -->
+          <!-- Alert Type Banner -->
           <tr>
-            <td style="background: ${config.colors.gradient}; padding: 20px 32px; text-align: center;">
-              <span style="font-size: 36px; display: block; margin-bottom: 8px;">${config.emoji}</span>
-              <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;">${config.label} ALERT</p>
-              <h2 style="color: #ffffff; margin: 8px 0 0 0; font-size: 18px; font-weight: 600;">${config.severityText}</h2>
+            <td style="background: ${config.colors.main}; padding: 16px 24px; text-align: center;">
+              <span style="font-size: 28px; display: block; margin-bottom: 4px;">${config.emoji}</span>
+              <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">${config.label} ALERT</p>
+              <h2 style="color: #ffffff; margin: 6px 0 0 0; font-size: 16px; font-weight: 600;">${config.severityText}</h2>
             </td>
           </tr>
 
-          <!-- Patient Card -->
+          <!-- Patient Information -->
           <tr>
-            <td style="padding: 28px 32px 0;">
-              <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0;">
-                <p style="color: #64748b; margin: 0 0 18px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
-                  👶 Patient Details
+            <td style="padding: 20px 24px 0;">
+              <div style="background: #f9fafb; border-radius: 10px; padding: 18px; border: 1px solid #e5e7eb;">
+                <p style="color: #6b7280; margin: 0 0 14px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                  👶 PATIENT INFORMATION
                 </p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td width="50%" style="padding: 10px 0; vertical-align: top;">
-                      <p style="color: #94a3b8; margin: 0; font-size: 12px; font-weight: 500;">Patient Name</p>
-                      <p style="color: #0f172a; margin: 6px 0 0 0; font-size: 20px; font-weight: 700;">${request.babyName}</p>
+                    <td width="50%" style="padding: 6px 0; vertical-align: top;">
+                      <p style="color: #9ca3af; margin: 0; font-size: 11px;">Patient Name</p>
+                      <p style="color: #111827; margin: 4px 0 0 0; font-size: 18px; font-weight: 700;">${request.babyName}</p>
                     </td>
-                    <td width="50%" style="padding: 10px 0; vertical-align: top;">
-                      <p style="color: #94a3b8; margin: 0; font-size: 12px; font-weight: 500;">Bed Number</p>
-                      <p style="color: #0f172a; margin: 6px 0 0 0; font-size: 20px; font-weight: 700;">${request.bedNumber}</p>
+                    <td width="50%" style="padding: 6px 0; vertical-align: top;">
+                      <p style="color: #9ca3af; margin: 0; font-size: 11px;">Bed Number</p>
+                      <p style="color: #111827; margin: 4px 0 0 0; font-size: 18px; font-weight: 700;">${request.bedNumber}</p>
                     </td>
                   </tr>
                   <tr>
-                    <td width="50%" style="padding: 10px 0; vertical-align: top;">
-                      <p style="color: #94a3b8; margin: 0; font-size: 12px; font-weight: 500;">Alert Priority</p>
-                      <p style="color: ${config.colors.main}; margin: 6px 0 0 0; font-size: 15px; font-weight: 700;">${config.label}</p>
+                    <td width="50%" style="padding: 6px 0; vertical-align: top;">
+                      <p style="color: #9ca3af; margin: 0; font-size: 11px;">Alert Type</p>
+                      <p style="color: ${config.colors.main}; margin: 4px 0 0 0; font-size: 14px; font-weight: 700;">${config.label}</p>
                     </td>
-                    <td width="50%" style="padding: 10px 0; vertical-align: top;">
-                      <p style="color: #94a3b8; margin: 0; font-size: 12px; font-weight: 500;">Timestamp</p>
-                      <p style="color: #0f172a; margin: 6px 0 0 0; font-size: 14px; font-weight: 600;">${request.timestamp}</p>
+                    <td width="50%" style="padding: 6px 0; vertical-align: top;">
+                      <p style="color: #9ca3af; margin: 0; font-size: 11px;">Alert Time</p>
+                      <p style="color: #111827; margin: 4px 0 0 0; font-size: 13px; font-weight: 600;">${request.timestamp}</p>
                     </td>
                   </tr>
                 </table>
@@ -364,107 +368,61 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
 
           ${abnormalVitalsHTML}
 
-          <!-- Vitals Grid -->
+          <!-- Current Vital Signs -->
           <tr>
-            <td style="padding: 24px 32px 0;">
-              <p style="color: #475569; margin: 0 0 16px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
-                ❤️ Current Vital Signs
+            <td style="padding: 20px 24px 0;">
+              <p style="color: #374151; margin: 0 0 12px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                ❤️ CURRENT VITAL SIGNS
               </p>
               
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="8">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${createVitalCard("❤️", "Heart Rate", request.vitals?.heartRate, "BPM", "100-150", hrStatus)}
+                ${createVitalCard("🫁", "Respiration Rate", request.vitals?.respirationRate, "/min", "35-55", rrStatus)}
+                ${createVitalCard("🌡️", "Temperature", request.vitals?.temperature, "°C", "36.5-37.2", tempStatus)}
+                ${createVitalCard("💧", "Oxygen Saturation (SpO₂)", request.vitals?.spo2, "%", "95-100%", spo2Status)}
                 <tr>
-                  <td width="50%" style="${vitalCardStyle(hrStatus)}">
-                    <table role="presentation" width="100%">
-                      <tr>
-                        <td>
-                          <span style="font-size: 24px;">❤️</span>
-                          <p style="margin: 8px 0 4px 0; color: #64748b; font-size: 11px; font-weight: 600; text-transform: uppercase;">Heart Rate</p>
-                          <p style="margin: 0; font-size: 28px; font-weight: 700; color: ${hrStatus.color};">${request.vitals?.heartRate ?? '—'}</p>
-                          <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 11px;">BPM • Normal: 100-150</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <td width="50%" style="${vitalCardStyle(rrStatus)}">
-                    <table role="presentation" width="100%">
-                      <tr>
-                        <td>
-                          <span style="font-size: 24px;">🫁</span>
-                          <p style="margin: 8px 0 4px 0; color: #64748b; font-size: 11px; font-weight: 600; text-transform: uppercase;">Respiration</p>
-                          <p style="margin: 0; font-size: 28px; font-weight: 700; color: ${rrStatus.color};">${request.vitals?.respirationRate ?? '—'}</p>
-                          <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 11px;">/min • Normal: 35-55</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                <tr>
-                  <td width="50%" style="${vitalCardStyle(tempStatus)}">
-                    <table role="presentation" width="100%">
-                      <tr>
-                        <td>
-                          <span style="font-size: 24px;">🌡️</span>
-                          <p style="margin: 8px 0 4px 0; color: #64748b; font-size: 11px; font-weight: 600; text-transform: uppercase;">Temperature</p>
-                          <p style="margin: 0; font-size: 28px; font-weight: 700; color: ${tempStatus.color};">${request.vitals?.temperature ?? '—'}</p>
-                          <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 11px;">°C • Normal: 36.5-37.2</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <td width="50%" style="${vitalCardStyle(spo2Status)}">
-                    <table role="presentation" width="100%">
-                      <tr>
-                        <td>
-                          <span style="font-size: 24px;">💨</span>
-                          <p style="margin: 8px 0 4px 0; color: #64748b; font-size: 11px; font-weight: 600; text-transform: uppercase;">Oxygen (SpO₂)</p>
-                          <p style="margin: 0; font-size: 28px; font-weight: 700; color: ${spo2Status.color};">${request.vitals?.spo2 ?? '—'}</p>
-                          <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 11px;">% • Normal: 95-100</p>
-                        </td>
-                      </tr>
-                    </table>
+                  <td style="padding: 8px 0;">
+                    <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td width="36" valign="top">
+                            <span style="font-size: 20px;">🛏️</span>
+                          </td>
+                          <td style="padding-left: 12px;">
+                            <p style="margin: 0; color: #6b7280; font-size: 12px;">Sleeping Position</p>
+                            <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 700; color: ${posInfo.color};">${posInfo.label} ${!posInfo.isSafe ? '⚠' : ''}</p>
+                          </td>
+                          <td align="right" valign="top">
+                            <p style="margin: 0; color: #9ca3af; font-size: 11px;">Safe: Back (Supine)</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </div>
                   </td>
                 </tr>
               </table>
-
-              <!-- Position -->
-              <div style="margin-top: 12px; ${vitalCardStyle(posInfo)}">
-                <table role="presentation" width="100%">
-                  <tr>
-                    <td width="40">
-                      <span style="font-size: 24px;">🛏️</span>
-                    </td>
-                    <td>
-                      <p style="margin: 0; color: #64748b; font-size: 11px; font-weight: 600; text-transform: uppercase;">Sleeping Position</p>
-                      <p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 700; color: ${posInfo.color};">${posInfo.label} ${posInfo.icon}</p>
-                    </td>
-                    <td style="text-align: right; vertical-align: middle;">
-                      <span style="color: #94a3b8; font-size: 11px;">Safe: Back (Supine)</span>
-                    </td>
-                  </tr>
-                </table>
-              </div>
             </td>
           </tr>
 
           <!-- Clinical Analysis -->
           <tr>
-            <td style="padding: 24px 32px 0;">
-              <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: 16px; padding: 24px;">
-                <p style="color: #0369a1; margin: 0 0 12px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
-                  🔬 Clinical Analysis
+            <td style="padding: 20px 24px 0;">
+              <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 16px;">
+                <p style="color: #0369a1; margin: 0 0 10px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                  🔬 CLINICAL ANALYSIS
                 </p>
-                <h3 style="color: #0c4a6e; margin: 0 0 12px 0; font-size: 18px; font-weight: 700;">${content.title}</h3>
-                <p style="color: #334155; margin: 0; font-size: 14px; line-height: 1.7;">${content.medicalExplanation}</p>
+                <h3 style="color: #0c4a6e; margin: 0 0 10px 0; font-size: 16px; font-weight: 700;">${content.title}</h3>
+                <p style="color: #334155; margin: 0; font-size: 14px; line-height: 1.6;">${content.medicalExplanation}</p>
               </div>
             </td>
           </tr>
 
-          <!-- Recommendations -->
+          <!-- Recommended Actions -->
           <tr>
-            <td style="padding: 24px 32px 0;">
-              <div style="background: ${config.colors.bg}; border: 1px solid ${config.colors.border}; border-radius: 16px; padding: 24px;">
-                <p style="color: ${config.colors.main}; margin: 0 0 16px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
-                  ⚕️ Recommended Actions
+            <td style="padding: 20px 24px 0;">
+              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 16px;">
+                <p style="color: #b91c1c; margin: 0 0 12px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                  🚨 RECOMMENDED ACTIONS
                 </p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   ${recommendationsHTML}
@@ -473,48 +431,37 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
             </td>
           </tr>
 
-          <!-- Closing -->
+          <!-- Closing Message -->
           <tr>
-            <td style="padding: 24px 32px;">
-              <div style="background: #f8fafc; border-radius: 12px; padding: 20px; text-align: center; border: 1px solid #e2e8f0;">
-                <p style="color: #64748b; margin: 0; font-size: 13px; line-height: 1.6;">${content.closingMessage}</p>
+            <td style="padding: 20px 24px;">
+              <div style="background: #e0f2fe; border-radius: 8px; padding: 14px; text-align: center;">
+                <p style="color: #0369a1; margin: 0; font-size: 13px; line-height: 1.5;">${content.closingMessage}</p>
               </div>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0c4a6e 0%, #164e63 100%); padding: 24px 32px; text-align: center;">
-              <div style="display: inline-block; width: 40px; height: 40px; background: rgba(255,255,255,0.15); border-radius: 12px; line-height: 40px; margin-bottom: 12px;">
-                <span style="font-size: 20px;">🏥</span>
-              </div>
-              <p style="color: rgba(255,255,255,0.95); margin: 0; font-size: 14px; font-weight: 600;">NeoGuard NICU Monitoring System</p>
-              <p style="color: rgba(255,255,255,0.7); margin: 8px 0 0 0; font-size: 12px;">Automated medical alert • Do not reply to this email</p>
-              <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
-                <p style="color: rgba(255,255,255,0.5); margin: 0; font-size: 10px;">
-                  This message contains confidential patient information protected under HIPAA regulations.
-                </p>
-              </div>
+            <td style="background: #1e3a5f; padding: 16px 24px; text-align: center;">
+              <p style="color: #ffffff; margin: 0; font-size: 13px; font-weight: 600;">NeoGuard NICU Monitoring System</p>
+              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0 0; font-size: 11px;">Automated medical alert - Do not reply</p>
             </td>
           </tr>
 
         </table>
 
-        <!-- Unsubscribe text -->
-        <p style="text-align: center; color: #94a3b8; font-size: 11px; margin-top: 24px;">
-          You are receiving this alert because you are registered as an alert recipient for this patient.
-        </p>
-        
       </td>
     </tr>
   </table>
+
 </body>
-</html>`;
+</html>
+  `;
 }
 
-const handler = async (req: Request): Promise<Response> => {
-  console.log("=== SEND ALERT EMAIL FUNCTION STARTED ===");
-  
+serve(async (req) => {
+  console.log("=== SEND-ALERT-EMAIL FUNCTION STARTED ===");
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -524,39 +471,31 @@ const handler = async (req: Request): Promise<Response> => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!BREVO_API_KEY) {
-      throw new Error("Email service not configured - missing BREVO_API_KEY");
+      throw new Error("BREVO_API_KEY not configured");
     }
 
-    const requestBody: AlertEmailRequest = await req.json();
-    const { to, babyName, babyId, bedNumber, alertType, message, triggerReason, timestamp, vitals } = requestBody;
-    
-    if (!babyName || !bedNumber || !alertType || !timestamp) {
-      throw new Error("Missing required email data");
-    }
-    
-    console.log(`Preparing ${alertType} alert for ${babyName} (Bed: ${bedNumber})`);
+    const request: AlertEmailRequest = await req.json();
+    console.log("Alert request:", JSON.stringify(request, null, 2));
 
-    let aiContent: GeneratedContent;
-    if (LOVABLE_API_KEY) {
-      aiContent = await generateAIContent(requestBody, LOVABLE_API_KEY);
-    } else {
-      aiContent = generateFallbackContent(requestBody, getAbnormalVitals(vitals));
-    }
+    // Generate AI content
+    const content = await generateAIContent(request, LOVABLE_API_KEY || "");
 
-    const htmlContent = generateEmailHTML(requestBody, aiContent);
-    const config = getAlertConfig(alertType);
+    // Generate email HTML
+    const htmlContent = generateEmailHTML(request, content);
+
+    // Send via Brevo
+    const config = getAlertConfig(request.alertType);
+    const subject = `${config.emoji} [${config.label}] NICU ALERT | Baby ${request.babyName} | Bed ${request.bedNumber}`;
 
     const emailPayload = {
-      sender: {
-        name: "NeoGuard NICU Alert",
-        email: "nagapoojithtn@gmail.com"
-      },
-      to: [{ email: to }],
-      subject: `${config.emoji} ${config.label} NICU ALERT | ${babyName} | Bed ${bedNumber}`,
+      sender: { name: "NeoGuard NICU", email: "nagapoojithtn@gmail.com" },
+      to: [{ email: request.to }],
+      subject,
       htmlContent,
     };
 
-    const emailResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+    console.log("Sending email via Brevo...");
+    const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
         "accept": "application/json",
@@ -566,30 +505,26 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify(emailPayload),
     });
 
-    const responseBody = await emailResponse.text();
+    const brevoResult = await brevoResponse.json();
+    console.log("Brevo response:", JSON.stringify(brevoResult));
 
-    if (!emailResponse.ok) {
-      throw new Error(`Failed to send email: ${emailResponse.status} - ${responseBody}`);
+    if (!brevoResponse.ok) {
+      throw new Error(`Brevo API error: ${JSON.stringify(brevoResult)}`);
     }
 
-    const emailResult = JSON.parse(responseBody);
-    console.log("=== EMAIL SENT SUCCESSFULLY ===", emailResult.messageId);
+    return new Response(JSON.stringify({ 
+      success: true, 
+      messageId: brevoResult.messageId,
+      message: "Alert email sent successfully"
+    }), {
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        messageId: emailResult.messageId,
-        details: { recipient: to, babyName, alertType, bedNumber }
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (error: any) {
-    console.error("=== ERROR ===", error.message);
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("Error in send-alert-email:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
-};
-
-serve(handler);
+});
