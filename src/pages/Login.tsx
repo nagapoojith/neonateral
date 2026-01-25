@@ -189,9 +189,9 @@ const Login = () => {
               </Link>
             </p>
             <p className="text-sm text-muted-foreground">
-              Are you a parent?{' '}
-              <Link to="/parent/login" className="text-primary font-semibold hover:underline">
-                Parent Portal
+              Looking for parent resources?{' '}
+              <Link to="/parent" className="text-primary font-semibold hover:underline">
+                Visit Parent Support Portal →
               </Link>
             </p>
             <p className="text-xs text-muted-foreground/70">
