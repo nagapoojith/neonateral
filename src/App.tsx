@@ -16,6 +16,7 @@ import Alerts from "./pages/Alerts";
 import AlertHistory from "./pages/AlertHistory";
 import ParentLogin from "./pages/ParentLogin";
 import ParentPortal from "./pages/ParentPortal";
+import LiveMonitoring from "./pages/LiveMonitoring";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -156,6 +157,8 @@ const AppRoutes = () => {
       <Route path="/parent" element={<Navigate to="/parent/portal" replace />} />
       <Route path="/parent/login" element={<Navigate to="/parent/portal" replace />} />
       <Route path="/parent/portal" element={<ParentPortal />} />
+      {/* Live IoT Monitoring - Public access for demo/presentation */}
+      <Route path="/live-monitoring" element={<LiveMonitoring />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
