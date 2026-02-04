@@ -75,28 +75,42 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+// Store vitals history in memory (simulated real-time data)
 const vitalsHistory: Record<string, VitalSigns[]> = {};
 
-let lastThingSpeakFetch = 0;
-let cachedThingSpeakData: {
-  heartRate: number | null;
-  spo2: number | null;
-  temperature: number | null;
-  respirationRate: number | null;
-  movement: number | null;
-  timestamp: number;
-} | null = null;
+// Track mock data rotation - cycle through different alert scenarios
+let mockScenarioIndex = 0;
+const MOCK_SCENARIOS = [
+  'heart_rate_high',
+  'heart_rate_low', 
+  'respiration_high',
+  'respiration_low',
+  'temperature_high',
+  'temperature_low',
+  'spo2_low',
+  'prone_position',
+  'normal',
+  'side_position',
+] as const;
 
-const THINGSPEAK_FETCH_INTERVAL = 5000;
-
+// PhysioNet Neonatal Thresholds for three-tier alert system
+// Normal: All vitals within safe range
+// High Priority (Early Warning): Vitals approaching abnormal limits
+// Critical: Any vital crosses critical threshold (email alerts sent)
 const VITAL_THRESHOLDS = {
   heartRate: { 
+    // Normal: 100-160 BPM
+    // High Priority: 80-99 or 151-160 BPM
+    // Critical: < 80 or > 160 BPM
     criticalMin: 80, 
     criticalMax: 160,
     highPriorityMin: 100,
     highPriorityMax: 150,
   },
   respirationRate: { 
+    // Normal: 30-60 /min
+    // High Priority: 30-34 or 56-60 /min
+    // Critical: < 30 or > 60 /min
     criticalMin: 30, 
     criticalMax: 60,
     highPriorityMin: 35,
@@ -107,6 +121,9 @@ const VITAL_THRESHOLDS = {
     warning: 94 
   },
   temperature: { 
+    // Normal: 36.5-37.5 °C
+    // High Priority: 36.0-36.4 or 37.3-37.5 °C
+    // Critical: < 36.0 or > 37.5 °C
     criticalMin: 36.0, 
     criticalMax: 37.5,
     highPriorityMin: 36.5,
@@ -114,86 +131,67 @@ const VITAL_THRESHOLDS = {
   },
 };
 
+// Track last alert time to prevent spam
 const lastAlertTime: Record<string, number> = {};
-const ALERT_COOLDOWN = 30000;
+const ALERT_COOLDOWN = 30000; // 30 seconds between alerts for same baby
 
-async function fetchThingSpeakVitals(): Promise<{
-  heartRate: number | null;
-  spo2: number | null;
-  temperature: number | null;
-  respirationRate: number | null;
-  movement: number | null;
-  timestamp: number;
-} | null> {
-  const now = Date.now();
+// Generate realistic vital signs based on mock scenario rotation
+// This ensures ALL vital types trigger alerts over time
+function generateVitals(babyId: string, _status: BabyStatus): VitalSigns {
+  // Get current scenario for this cycle
+  const scenario = MOCK_SCENARIOS[mockScenarioIndex % MOCK_SCENARIOS.length];
   
-  if (cachedThingSpeakData && (now - lastThingSpeakFetch) < THINGSPEAK_FETCH_INTERVAL) {
-    return cachedThingSpeakData;
-  }
-
-  try {
-    const { data, error } = await supabase.functions.invoke('fetch-thingspeak-vitals', {
-      body: { results: 1 },
-    });
-
-    if (error) {
-      console.error('Error fetching ThingSpeak vitals:', error);
-      return cachedThingSpeakData;
-    }
-
-    if (data?.success && data?.latest) {
-      lastThingSpeakFetch = now;
-      cachedThingSpeakData = {
-        heartRate: data.latest.heartRate,
-        spo2: data.latest.spo2,
-        temperature: data.latest.temperature,
-        respirationRate: data.latest.respirationRate,
-        movement: data.latest.movement ?? 50,
-        timestamp: data.latest.timestamp || now,
-      };
-      console.log('ThingSpeak vitals fetched:', cachedThingSpeakData);
-      return cachedThingSpeakData;
-    }
-
-    return cachedThingSpeakData;
-  } catch (error) {
-    console.error('ThingSpeak fetch error:', error);
-    return cachedThingSpeakData;
-  }
-}
-
-function generateVitalsFromThingSpeak(
-  thingSpeakData: {
-    heartRate: number | null;
-    spo2: number | null;
-    temperature: number | null;
-    respirationRate: number | null;
-    movement: number | null;
-    timestamp: number;
-  } | null
-): VitalSigns {
-  const defaultVitals: VitalSigns = {
-    timestamp: Date.now(),
-    heartRate: 130,
-    respirationRate: 42,
-    spo2: 97,
-    temperature: 36.8,
-    movement: 50,
-    sleepingPosition: 'back',
-  };
-
-  if (!thingSpeakData) {
-    return defaultVitals;
+  // Base normal values
+  let heartRate = 130 + Math.round((Math.random() - 0.5) * 20);
+  let respirationRate = 42 + Math.round((Math.random() - 0.5) * 10);
+  let spo2 = 97 + Math.round((Math.random() - 0.5) * 2);
+  let temperature = 36.8 + parseFloat(((Math.random() - 0.5) * 0.3).toFixed(1));
+  let movement = 50 + Math.round((Math.random() - 0.5) * 20);
+  let sleepingPosition: 'back' | 'side' | 'prone' = 'back';
+  
+  // Apply scenario-specific abnormal values
+  switch (scenario) {
+    case 'heart_rate_high':
+      heartRate = 165 + Math.round(Math.random() * 10); // Critical: >160
+      break;
+    case 'heart_rate_low':
+      heartRate = 75 + Math.round(Math.random() * 4); // Critical: <80
+      break;
+    case 'respiration_high':
+      respirationRate = 62 + Math.round(Math.random() * 5); // Critical: >60
+      break;
+    case 'respiration_low':
+      respirationRate = 25 + Math.round(Math.random() * 4); // Critical: <30
+      break;
+    case 'temperature_high':
+      temperature = 37.7 + parseFloat((Math.random() * 0.4).toFixed(1)); // Critical: >37.5
+      break;
+    case 'temperature_low':
+      temperature = 35.5 + parseFloat((Math.random() * 0.4).toFixed(1)); // Critical: <36.0
+      break;
+    case 'spo2_low':
+      spo2 = 85 + Math.round(Math.random() * 4); // Critical: <90
+      break;
+    case 'prone_position':
+      sleepingPosition = 'prone';
+      break;
+    case 'side_position':
+      sleepingPosition = 'side';
+      break;
+    case 'normal':
+    default:
+      // All values stay normal
+      break;
   }
 
   return {
-    timestamp: thingSpeakData.timestamp || Date.now(),
-    heartRate: thingSpeakData.heartRate ?? defaultVitals.heartRate,
-    respirationRate: thingSpeakData.respirationRate ?? defaultVitals.respirationRate,
-    spo2: thingSpeakData.spo2 ?? defaultVitals.spo2,
-    temperature: thingSpeakData.temperature ?? defaultVitals.temperature,
-    movement: thingSpeakData.movement ?? defaultVitals.movement,
-    sleepingPosition: 'back',
+    timestamp: Date.now(),
+    heartRate,
+    respirationRate,
+    spo2,
+    temperature,
+    movement,
+    sleepingPosition,
   };
 }
 
@@ -305,15 +303,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
       setBabies(mappedBabies);
 
+      // Initialize vitals history for new babies
       mappedBabies.forEach((baby) => {
         if (!vitalsHistory[baby.id]) {
           vitalsHistory[baby.id] = [];
-          const defaultVitals = generateVitalsFromThingSpeak(null);
           for (let i = 30; i >= 0; i--) {
-            vitalsHistory[baby.id].push({
-              ...defaultVitals,
-              timestamp: Date.now() - i * 5000,
-            });
+            const vitals = generateVitals(baby.id, baby.status);
+            vitals.timestamp = Date.now() - i * 5000;
+            vitalsHistory[baby.id].push(vitals);
           }
         }
       });
@@ -522,12 +519,21 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
     }
   }, [fetchBabyRecipients]);
 
+  // Rotate mock scenario every 30 seconds to test different alert types
   useEffect(() => {
-    const fetchAndUpdateVitals = async () => {
-      const thingSpeakData = await fetchThingSpeakVitals();
-      
+    const rotationInterval = setInterval(() => {
+      mockScenarioIndex = (mockScenarioIndex + 1) % MOCK_SCENARIOS.length;
+      console.log(`Mock scenario rotated to: ${MOCK_SCENARIOS[mockScenarioIndex]}`);
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(rotationInterval);
+  }, []);
+
+  // Update vitals every 3 seconds and check for automatic alerts
+  useEffect(() => {
+    const interval = setInterval(() => {
       babies.forEach((baby) => {
-        const newVitals = generateVitalsFromThingSpeak(thingSpeakData);
+        const newVitals = generateVitals(baby.id, baby.status);
         if (!vitalsHistory[baby.id]) {
           vitalsHistory[baby.id] = [];
         }
@@ -536,25 +542,16 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
           vitalsHistory[baby.id].shift();
         }
 
+        // Check thresholds and trigger automatic alerts for ALL vital types
         if (alertsEnabledRef.current[baby.id]) {
           const { level, reasons } = checkVitalThresholds(newVitals);
           if (level !== 'normal' && reasons.length > 0) {
-            console.log(`IoT Alert triggered for ${baby.name}:`, reasons);
+            console.log(`Alert triggered for ${baby.name}:`, reasons);
             sendAutoAlertEmail(baby, newVitals, level, reasons);
           }
         }
       });
-    };
-
-    if (babies.length > 0) {
-      fetchAndUpdateVitals();
-    }
-
-    const interval = setInterval(() => {
-      if (babies.length > 0) {
-        fetchAndUpdateVitals();
-      }
-    }, 5000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [babies, sendAutoAlertEmail]);
