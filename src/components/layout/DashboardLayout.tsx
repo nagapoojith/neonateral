@@ -18,6 +18,7 @@ import {
   Activity,
   Shield,
   Clock,
+  Radio,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -38,6 +39,7 @@ const navItems = [
   { path: '/register', label: 'Register Baby', icon: Baby, doctorOnly: true },
   { path: '/alerts', label: 'Alerts', icon: Bell },
   { path: '/history', label: 'Alert History', icon: History },
+  { path: '/live-monitoring', label: 'IoT Monitoring', icon: Radio },
 ];
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
