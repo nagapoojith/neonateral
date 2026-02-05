@@ -256,11 +256,24 @@ const ParentChatbot: React.FC<ParentChatbotProps> = ({ babyName, onShowHospitals
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               assistantContent += content;
-              setMessages(prev =>
-                prev.map(m =>
-                  m.id === assistantMsgId ? { ...m, content: assistantContent } : m
-                )
-              );
+              
+              // Check if AI response contains hospital map trigger
+              if (assistantContent.includes('[SHOW_HOSPITAL_MAP]')) {
+                setShowEscalationWarning(true);
+                // Remove the tag from displayed content
+                const cleanContent = assistantContent.replace('[SHOW_HOSPITAL_MAP]', '');
+                setMessages(prev =>
+                  prev.map(m =>
+                    m.id === assistantMsgId ? { ...m, content: cleanContent, isEscalation: true } : m
+                  )
+                );
+              } else {
+                setMessages(prev =>
+                  prev.map(m =>
+                    m.id === assistantMsgId ? { ...m, content: assistantContent } : m
+                  )
+                );
+              }
             }
           } catch {
             textBuffer = line + '\n' + textBuffer;
