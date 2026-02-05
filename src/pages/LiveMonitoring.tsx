@@ -20,6 +20,12 @@ const THINGSPEAK_API_KEY = 'DXDNPGTNJC504SX4';
 const REFRESH_INTERVAL = 15000; // 15 seconds
 const HISTORY_COUNT = 100; // Fetch last 100 entries for graphs
 
+// ThingSpeak Field Mapping (based on Arduino output: Temp, BPM, SpO2)
+// field1 = Temperature (°C)
+// field2 = unused
+// field3 = Heart Rate (BPM)
+// field4 = SpO2 (%)
+
 interface ThingSpeakEntry {
   created_at: string;
   entry_id: number;
@@ -118,16 +124,24 @@ const LiveMonitoring: React.FC = () => {
 
       setPreviousEntryId(latestEntry.entry_id);
 
-      // Parse values - only set if they exist and are valid numbers
-      const heartRate = latestEntry.field3 ? parseFloat(latestEntry.field3) : null;
-      const spo2 = latestEntry.field4 ? parseFloat(latestEntry.field4) : null;
-      const temperature = latestEntry.field1 ? parseFloat(latestEntry.field1) : null;
+      // Parse values with correct field mapping
+      // Arduino sends: Temp (field1), BPM (field3), SpO2 (field4)
+      const temperatureRaw = latestEntry.field1 ? parseFloat(latestEntry.field1) : null;
+      const heartRateRaw = latestEntry.field3 ? parseFloat(latestEntry.field3) : null;
+      const spo2Raw = latestEntry.field4 ? parseFloat(latestEntry.field4) : null;
 
-      // Validate that values are actually numbers
+      // Validate values - reject invalid readings
+      // Temperature: -273.15 means sensor not connected (0 Kelvin), valid range 20-45°C
+      const temperature = temperatureRaw !== null && !isNaN(temperatureRaw) && temperatureRaw > -50 && temperatureRaw < 50 ? temperatureRaw : null;
+      // Heart Rate: valid range 30-250 BPM
+      const heartRate = heartRateRaw !== null && !isNaN(heartRateRaw) && heartRateRaw > 0 && heartRateRaw < 300 ? heartRateRaw : null;
+      // SpO2: valid range 70-100%
+      const spo2 = spo2Raw !== null && !isNaN(spo2Raw) && spo2Raw > 0 && spo2Raw <= 100 ? spo2Raw : null;
+
       setCurrentVitals({
-        heartRate: heartRate !== null && !isNaN(heartRate) && heartRate > 0 ? heartRate : null,
-        spo2: spo2 !== null && !isNaN(spo2) && spo2 > 0 ? spo2 : null,
-        temperature: temperature !== null && !isNaN(temperature) && temperature > 0 ? temperature : null,
+        heartRate: heartRate,
+        spo2: spo2,
+        temperature: temperature,
         timestamp: latestEntry.created_at,
         entryId: latestEntry.entry_id,
       });
@@ -160,16 +174,23 @@ const LiveMonitoring: React.FC = () => {
 
       const formattedData: ChartDataPoint[] = historyData.feeds.map((entry) => {
         const timestamp = new Date(entry.created_at);
-        const heartRate = entry.field3 ? parseFloat(entry.field3) : null;
-        const spo2 = entry.field4 ? parseFloat(entry.field4) : null;
-        const temperature = entry.field1 ? parseFloat(entry.field1) : null;
+        
+        // Parse raw values with correct field mapping
+        const temperatureRaw = entry.field1 ? parseFloat(entry.field1) : null;
+        const heartRateRaw = entry.field3 ? parseFloat(entry.field3) : null;
+        const spo2Raw = entry.field4 ? parseFloat(entry.field4) : null;
+        
+        // Validate values with proper ranges
+        const temperature = temperatureRaw !== null && !isNaN(temperatureRaw) && temperatureRaw > -50 && temperatureRaw < 50 ? temperatureRaw : null;
+        const heartRate = heartRateRaw !== null && !isNaN(heartRateRaw) && heartRateRaw > 0 && heartRateRaw < 300 ? heartRateRaw : null;
+        const spo2 = spo2Raw !== null && !isNaN(spo2Raw) && spo2Raw > 0 && spo2Raw <= 100 ? spo2Raw : null;
 
         return {
           time: timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
           fullTime: timestamp.toLocaleString(),
-          heartRate: heartRate !== null && !isNaN(heartRate) && heartRate > 0 ? heartRate : null,
-          spo2: spo2 !== null && !isNaN(spo2) && spo2 > 0 ? spo2 : null,
-          temperature: temperature !== null && !isNaN(temperature) && temperature > 0 ? temperature : null,
+          heartRate: heartRate,
+          spo2: spo2,
+          temperature: temperature,
         };
       });
 
