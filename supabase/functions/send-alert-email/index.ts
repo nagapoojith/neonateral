@@ -32,27 +32,48 @@ interface GeneratedContent {
   closingMessage: string;
 }
 
+// Consistent thresholds matching DataContext.tsx PhysioNet neonatal thresholds
+// Heart Rate: Normal 100-160 BPM, Critical <80 or >160 BPM
+// Respiration: Normal 30-60/min, Critical <30 or >60/min  
+// Temperature: Normal 36.5-37.5°C, Critical <36.0 or >37.5°C
+// SpO2: Normal >=95%, Critical <90%
 const getVitalStatus = (vital: string, value: number | undefined): { status: string; color: string; bgColor: string; isNormal: boolean } => {
   if (value === undefined) return { status: "N/A", color: "#6b7280", bgColor: "#f3f4f6", isNormal: true };
 
   if (vital === "heartRate") {
-    if (value >= 100 && value <= 150) return { status: "NORMAL", color: "#059669", bgColor: "#d1fae5", isNormal: true };
-    return { status: "CRITICAL", color: "#dc2626", bgColor: "#fee2e2", isNormal: false };
+    // Critical: <80 or >160 BPM
+    if (value < 80 || value > 160) return { status: "CRITICAL", color: "#dc2626", bgColor: "#fee2e2", isNormal: false };
+    // Normal: 100-160 BPM
+    if (value >= 100 && value <= 160) return { status: "NORMAL", color: "#059669", bgColor: "#d1fae5", isNormal: true };
+    // High Priority: 80-99 BPM (approaching limits)
+    return { status: "WARNING", color: "#d97706", bgColor: "#fef3c7", isNormal: false };
   }
 
   if (vital === "respirationRate") {
+    // Critical: <30 or >60/min
+    if (value < 30 || value > 60) return { status: "CRITICAL", color: "#dc2626", bgColor: "#fee2e2", isNormal: false };
+    // Normal: 35-55/min
     if (value >= 35 && value <= 55) return { status: "NORMAL", color: "#059669", bgColor: "#d1fae5", isNormal: true };
-    return { status: "CRITICAL", color: "#dc2626", bgColor: "#fee2e2", isNormal: false };
+    // High Priority: 30-34 or 56-60/min
+    return { status: "WARNING", color: "#d97706", bgColor: "#fef3c7", isNormal: false };
   }
 
   if (vital === "temperature") {
-    if (value >= 36.5 && value <= 37.2) return { status: "NORMAL", color: "#059669", bgColor: "#d1fae5", isNormal: true };
-    return { status: "CRITICAL", color: "#dc2626", bgColor: "#fee2e2", isNormal: false };
+    // Critical: <36.0 or >37.5°C
+    if (value < 36.0 || value > 37.5) return { status: "CRITICAL", color: "#dc2626", bgColor: "#fee2e2", isNormal: false };
+    // Normal: 36.5-37.5°C
+    if (value >= 36.5 && value <= 37.5) return { status: "NORMAL", color: "#059669", bgColor: "#d1fae5", isNormal: true };
+    // High Priority: 36.0-36.4°C
+    return { status: "WARNING", color: "#d97706", bgColor: "#fef3c7", isNormal: false };
   }
 
   if (vital === "spo2") {
+    // Critical: <90%
+    if (value < 90) return { status: "CRITICAL", color: "#dc2626", bgColor: "#fee2e2", isNormal: false };
+    // Normal: >=95%
     if (value >= 95) return { status: "NORMAL", color: "#059669", bgColor: "#d1fae5", isNormal: true };
-    return { status: "CRITICAL", color: "#dc2626", bgColor: "#fee2e2", isNormal: false };
+    // High Priority: 90-94%
+    return { status: "WARNING", color: "#d97706", bgColor: "#fef3c7", isNormal: false };
   }
 
   return { status: "N/A", color: "#6b7280", bgColor: "#f3f4f6", isNormal: true };
@@ -117,10 +138,10 @@ Trigger: ${request.triggerReason || request.message}
 Abnormal Vitals: ${abnormalVitals.length > 0 ? abnormalVitals.join(", ") : "None"}
 
 Current Readings:
-- Heart Rate: ${request.vitals?.heartRate ?? 'N/A'} BPM (Normal: 120-160)
-- Respiration: ${request.vitals?.respirationRate ?? 'N/A'}/min (Normal: 35-55)
-- Temperature: ${request.vitals?.temperature ?? 'N/A'}°C (Normal: 36.5-37.5)
-- SpO₂: ${request.vitals?.spo2 ?? 'N/A'}% (Normal: 95-100%)
+- Heart Rate: ${request.vitals?.heartRate ?? 'N/A'} BPM (Normal: 100-160, Critical: <80 or >160)
+- Respiration: ${request.vitals?.respirationRate ?? 'N/A'}/min (Normal: 30-60, Critical: <30 or >60)
+- Temperature: ${request.vitals?.temperature ?? 'N/A'}°C (Normal: 36.5-37.5, Critical: <36.0 or >37.5)
+- SpO₂: ${request.vitals?.spo2 ?? 'N/A'}% (Normal: 95-100%, Critical: <90%)
 - Position: ${posInfo.label} (Safe: Back/Supine)
 
 Respond with JSON:
@@ -423,8 +444,8 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
               </p>
               
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                ${createVitalCard("❤️", "#fef2f2", "Heart Rate", request.vitals?.heartRate, "BPM", "120-160", hrStatus)}
-                ${createVitalCard("🫁", "#eff6ff", "Respiration Rate", request.vitals?.respirationRate, "/min", "35-55", rrStatus)}
+                ${createVitalCard("❤️", "#fef2f2", "Heart Rate", request.vitals?.heartRate, "BPM", "100-160", hrStatus)}
+                ${createVitalCard("🫁", "#eff6ff", "Respiration Rate", request.vitals?.respirationRate, "/min", "30-60", rrStatus)}
                 ${createVitalCard("💧", "#ecfdf5", "Oxygen Saturation (SpO₂)", request.vitals?.spo2, "%", "95-100%", spo2Status)}
                 ${createVitalCard("🌡️", "#fff7ed", "Body Temperature", request.vitals?.temperature, "°C", "36.5-37.5°C", tempStatus)}
                 ${createPositionCard()}
