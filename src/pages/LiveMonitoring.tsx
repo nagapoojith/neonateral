@@ -20,19 +20,13 @@ const THINGSPEAK_API_KEY = 'DXDNPGTNJC504SX4';
 const REFRESH_INTERVAL = 15000; // 15 seconds
 const HISTORY_COUNT = 100; // Fetch last 100 entries for graphs
 
-// ThingSpeak Field Mapping (based on Arduino output: Temp, BPM, SpO2)
-// field1 = Temperature (°C)
-// field2 = unused
-// field3 = Heart Rate (BPM)
-// field4 = SpO2 (%)
-
 interface ThingSpeakEntry {
   created_at: string;
   entry_id: number;
-  field1: string | null; // Temperature
-  field2: string | null; // Unused
-  field3: string | null; // Heart Rate (BPM)
-  field4: string | null; // SpO2
+  field1: string | null;
+  field2: string | null;
+  field3: string | null;
+  field4: string | null;
 }
 
 interface ThingSpeakResponse {
@@ -124,19 +118,13 @@ const LiveMonitoring: React.FC = () => {
 
       setPreviousEntryId(latestEntry.entry_id);
 
-      // Parse values with correct field mapping
-      // Arduino sends: Temp (field1), BPM (field3), SpO2 (field4)
-      const temperatureRaw = latestEntry.field1 ? parseFloat(latestEntry.field1) : null;
-      const heartRateRaw = latestEntry.field3 ? parseFloat(latestEntry.field3) : null;
-      const spo2Raw = latestEntry.field4 ? parseFloat(latestEntry.field4) : null;
+      const heartRateRaw = latestEntry.field1 ? parseFloat(latestEntry.field1) : null;
+      const spo2Raw = latestEntry.field2 ? parseFloat(latestEntry.field2) : null;
+      const temperatureRaw = latestEntry.field3 ? parseFloat(latestEntry.field3) : null;
 
-      // Validate values - reject invalid readings
-      // Temperature: -273.15 means sensor not connected (0 Kelvin), valid range 20-45°C
-      const temperature = temperatureRaw !== null && !isNaN(temperatureRaw) && temperatureRaw > -50 && temperatureRaw < 50 ? temperatureRaw : null;
-      // Heart Rate: valid range 30-250 BPM
       const heartRate = heartRateRaw !== null && !isNaN(heartRateRaw) && heartRateRaw > 0 && heartRateRaw < 300 ? heartRateRaw : null;
-      // SpO2: valid range 70-100%
       const spo2 = spo2Raw !== null && !isNaN(spo2Raw) && spo2Raw > 0 && spo2Raw <= 100 ? spo2Raw : null;
+      const temperature = temperatureRaw !== null && !isNaN(temperatureRaw) && temperatureRaw > -50 && temperatureRaw < 50 ? temperatureRaw : null;
 
       setCurrentVitals({
         heartRate: heartRate,
@@ -175,15 +163,13 @@ const LiveMonitoring: React.FC = () => {
       const formattedData: ChartDataPoint[] = historyData.feeds.map((entry) => {
         const timestamp = new Date(entry.created_at);
         
-        // Parse raw values with correct field mapping
-        const temperatureRaw = entry.field1 ? parseFloat(entry.field1) : null;
-        const heartRateRaw = entry.field3 ? parseFloat(entry.field3) : null;
-        const spo2Raw = entry.field4 ? parseFloat(entry.field4) : null;
-        
-        // Validate values with proper ranges
-        const temperature = temperatureRaw !== null && !isNaN(temperatureRaw) && temperatureRaw > -50 && temperatureRaw < 50 ? temperatureRaw : null;
+        const heartRateRaw = entry.field1 ? parseFloat(entry.field1) : null;
+        const spo2Raw = entry.field2 ? parseFloat(entry.field2) : null;
+        const temperatureRaw = entry.field3 ? parseFloat(entry.field3) : null;
+
         const heartRate = heartRateRaw !== null && !isNaN(heartRateRaw) && heartRateRaw > 0 && heartRateRaw < 300 ? heartRateRaw : null;
         const spo2 = spo2Raw !== null && !isNaN(spo2Raw) && spo2Raw > 0 && spo2Raw <= 100 ? spo2Raw : null;
+        const temperature = temperatureRaw !== null && !isNaN(temperatureRaw) && temperatureRaw > -50 && temperatureRaw < 50 ? temperatureRaw : null;
 
         return {
           time: timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
@@ -488,13 +474,13 @@ const LiveMonitoring: React.FC = () => {
               <span className="text-slate-400">Channel ID:</span> {THINGSPEAK_CHANNEL_ID}
             </div>
             <div>
-              <span className="text-slate-400">Field 1:</span> Temperature
+              <span className="text-slate-400">Field 1:</span> Heart Rate
             </div>
             <div>
-              <span className="text-slate-400">Field 3:</span> Heart Rate
+              <span className="text-slate-400">Field 2:</span> SpO₂
             </div>
             <div>
-              <span className="text-slate-400">Field 4:</span> SpO₂
+              <span className="text-slate-400">Field 3:</span> Temperature
             </div>
             <div>
               <span className="text-slate-400">Refresh Rate:</span> 15 seconds
