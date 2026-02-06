@@ -288,15 +288,23 @@ const HospitalMap: React.FC = () => {
     clearRoute();
 
     try {
-      const routeUrl = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLng}:${hospital.lat},${hospital.lng}/json?key=${tomtomApiKey}&traffic=true&travelMode=car`;
-      
-      const response = await fetch(routeUrl);
-      
-      if (!response.ok) {
+      const response = await supabase.functions.invoke('tomtom-proxy', {
+        body: {
+          action: 'route',
+          params: {
+            startLat,
+            startLng,
+            endLat: hospital.lat,
+            endLng: hospital.lng,
+          },
+        },
+      });
+
+      if (response.error) {
         throw new Error('Failed to calculate route');
       }
 
-      const data = await response.json();
+      const data = response.data;
       
       if (!data.routes || data.routes.length === 0) {
         throw new Error('No route found');
@@ -472,46 +480,52 @@ const HospitalMap: React.FC = () => {
     
     if (tomtomApiKey) {
       try {
-        const searchQuery = encodeURIComponent(manualLocation);
-        const geocodeResponse = await fetch(
-          `https://api.tomtom.com/search/2/geocode/${searchQuery}.json?key=${tomtomApiKey}&limit=1`
-        );
+        const geocodeResponse = await supabase.functions.invoke('tomtom-proxy', {
+          body: {
+            action: 'geocode',
+            params: { query: manualLocation, limit: 1 },
+          },
+        });
         
-        if (geocodeResponse.ok) {
-          const geocodeData = await geocodeResponse.json();
-          if (geocodeData.results && geocodeData.results.length > 0) {
-            const { lat, lon } = geocodeData.results[0].position;
-            setUserLocation({ lat, lng: lon });
+        if (!geocodeResponse.error && geocodeResponse.data?.results?.length > 0) {
+          const { lat, lon } = geocodeResponse.data.results[0].position;
+          setUserLocation({ lat, lng: lon });
+          
+          const hospitalSearchResponse = await supabase.functions.invoke('tomtom-proxy', {
+            body: {
+              action: 'poiSearch',
+              params: {
+                query: 'children hospital',
+                lat,
+                lon,
+                radius: 10000,
+                limit: 5,
+                categorySet: '7321',
+              },
+            },
+          });
+          
+          if (!hospitalSearchResponse.error && hospitalSearchResponse.data?.results?.length > 0) {
+            const foundHospitals: Hospital[] = hospitalSearchResponse.data.results.map((result: any, index: number) => ({
+              id: result.id || String(index + 1),
+              name: result.poi?.name || 'Hospital',
+              address: result.address?.freeformAddress || 'Address not available',
+              distance: result.dist ? `${(result.dist / 1000).toFixed(1)} km` : 'N/A',
+              distanceValue: result.dist || 0,
+              phone: result.poi?.phone || undefined,
+              isOpen: true,
+              rating: 4.0 + Math.random() * 0.8,
+              totalRatings: Math.floor(1000 + Math.random() * 2000),
+              lat: result.position.lat,
+              lng: result.position.lon,
+              placeId: result.id,
+            }));
             
-            const hospitalSearchResponse = await fetch(
-              `https://api.tomtom.com/search/2/poiSearch/children%20hospital.json?key=${tomtomApiKey}&lat=${lat}&lon=${lon}&radius=10000&limit=5&categorySet=7321`
-            );
-            
-            if (hospitalSearchResponse.ok) {
-              const hospitalData = await hospitalSearchResponse.json();
-              if (hospitalData.results && hospitalData.results.length > 0) {
-                const foundHospitals: Hospital[] = hospitalData.results.map((result: any, index: number) => ({
-                  id: result.id || String(index + 1),
-                  name: result.poi?.name || 'Hospital',
-                  address: result.address?.freeformAddress || 'Address not available',
-                  distance: result.dist ? `${(result.dist / 1000).toFixed(1)} km` : 'N/A',
-                  distanceValue: result.dist || 0,
-                  phone: result.poi?.phone || undefined,
-                  isOpen: true,
-                  rating: 4.0 + Math.random() * 0.8,
-                  totalRatings: Math.floor(1000 + Math.random() * 2000),
-                  lat: result.position.lat,
-                  lng: result.position.lon,
-                  placeId: result.id,
-                }));
-                
-                setHospitals(foundHospitals);
-                setSelectedHospital(foundHospitals[0]);
-                setIsLoading(false);
-                toast.success(`Found ${foundHospitals.length} hospitals near "${manualLocation}"`);
-                return;
-              }
-            }
+            setHospitals(foundHospitals);
+            setSelectedHospital(foundHospitals[0]);
+            setIsLoading(false);
+            toast.success(`Found ${foundHospitals.length} hospitals near "${manualLocation}"`);
+            return;
           }
         }
       } catch (error) {
