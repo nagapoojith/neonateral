@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Baby, MessageCircle, MapPin, AlertTriangle, Heart, ArrowLeft } from 'lucide-react';
+import { Baby, MessageCircle, MapPin, AlertTriangle, Heart, ArrowLeft, Volume2 } from 'lucide-react';
 import ParentChatbot from '@/components/parent/ParentChatbot';
 import HospitalMap from '@/components/parent/HospitalMap';
+import CryDetection from '@/components/nicu/CryDetection';
 
 const ParentPortal = () => {
-  const [activeTab, setActiveTab] = useState<'chatbot' | 'hospitals'>('chatbot');
+  const [activeTab, setActiveTab] = useState<'chatbot' | 'hospitals' | 'cry'>('chatbot');
   const [showHospitalMap, setShowHospitalMap] = useState(false);
 
   const handleShowHospitals = () => {
@@ -17,7 +18,6 @@ const ParentPortal = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-50 header-medical">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -40,9 +40,7 @@ const ParentPortal = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
-        {/* Welcome Card */}
         <Card className="mb-6 card-medical">
           <CardContent className="pt-6">
             <div className="flex items-start gap-4">
@@ -60,7 +58,6 @@ const ParentPortal = () => {
           </CardContent>
         </Card>
 
-        {/* Disclaimer */}
         <div className="mb-6 p-4 rounded-xl bg-status-warning-bg border border-status-warning/30">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-status-warning mt-0.5 flex-shrink-0" />
@@ -74,8 +71,7 @@ const ParentPortal = () => {
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           <Button
             variant={activeTab === 'chatbot' ? 'default' : 'outline'}
             onClick={() => setActiveTab('chatbot')}
@@ -83,6 +79,14 @@ const ParentPortal = () => {
           >
             <MessageCircle className="w-4 h-4" />
             Care Assistant
+          </Button>
+          <Button
+            variant={activeTab === 'cry' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('cry')}
+            className="gap-2"
+          >
+            <Volume2 className="w-4 h-4" />
+            Cry Detection
           </Button>
           <Button
             variant={activeTab === 'hospitals' ? 'default' : 'outline'}
@@ -94,11 +98,12 @@ const ParentPortal = () => {
           </Button>
         </div>
 
-        {/* Content Area */}
         {activeTab === 'chatbot' ? (
           <ParentChatbot 
             onShowHospitals={handleShowHospitals}
           />
+        ) : activeTab === 'cry' ? (
+          <CryDetection showConfidence={false} />
         ) : (
           <HospitalMap />
         )}
