@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData, VitalSigns } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import VitalsChart from '@/components/charts/VitalsChart';
 import ManualAlertDialog from '@/components/dashboard/ManualAlertDialog';
 import AlertControlPanel from '@/components/dashboard/AlertControlPanel';
 import DeleteBabyDialog from '@/components/dashboard/DeleteBabyDialog';
+import ApneaRiskWarning from '@/components/nicu/ApneaRiskWarning';
+import IncubatorEnvironment from '@/components/nicu/IncubatorEnvironment';
+import NeonatalRiskScore from '@/components/nicu/NeonatalRiskScore';
+import CryDetection from '@/components/nicu/CryDetection';
+import HistoricalReport from '@/components/nicu/HistoricalReport';
+import type { CryResult } from '@/components/nicu/CryDetection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,17 +35,23 @@ import {
   User,
   Shield,
   Waves,
+  Volume2,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const BabyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { babies, getVitalsHistory, getCurrentVitals, alerts } = useData();
+  const { user } = useAuth();
   const [vitalsHistory, setVitalsHistory] = useState<VitalSigns[]>([]);
   const [currentVitals, setCurrentVitals] = useState<VitalSigns | null>(null);
+  const [cryResult, setCryResult] = useState<CryResult | null>(null);
 
   const baby = babies.find((b) => b.id === id);
   const babyAlerts = alerts.filter((a) => a.babyId === id && !a.acknowledged);
+
+  const isDoctorOrSenior = user?.role === 'doctor' || user?.role === 'senior_doctor';
 
   useEffect(() => {
     if (!id) return;
@@ -53,7 +66,6 @@ const BabyDetail = () => {
     return () => clearInterval(interval);
   }, [id, getVitalsHistory, getCurrentVitals]);
 
-  // PhysioNet Neonatal Thresholds
   const getVitalStatus = (type: string, value: number): 'normal' | 'warning' | 'critical' => {
     switch (type) {
       case 'heartRate':
@@ -313,7 +325,7 @@ const BabyDetail = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="vitals" className="space-y-4">
+          <TabsContent value="vitals" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-4">
               <VitalsChart
                 data={vitalsHistory}
@@ -348,6 +360,41 @@ const BabyDetail = () => {
                 normalRange={{ min: 94, max: 100 }}
               />
             </div>
+
+            {isDoctorOrSenior && (
+              <>
+                <h3 className="text-lg font-bold text-foreground flex items-center gap-2 pt-2">
+                  <Shield className="w-5 h-5 text-primary" />
+                  Advanced Monitoring
+                  <Badge variant="secondary" className="text-xs">Doctor View</Badge>
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <ApneaRiskWarning vitalsHistory={vitalsHistory} currentVitals={currentVitals} />
+                  <IncubatorEnvironment babyId={baby.id} />
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <NeonatalRiskScore
+                    currentVitals={currentVitals}
+                    cryResult={cryResult}
+                  />
+                  <div className="space-y-4">
+                    <CryDetection showConfidence onResultChange={setCryResult} />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {!isDoctorOrSenior && (
+              <CryDetection showConfidence={false} onResultChange={setCryResult} />
+            )}
+
+            <HistoricalReport
+              baby={baby}
+              alerts={alerts}
+              vitalsHistory={vitalsHistory}
+              cryResult={cryResult}
+              riskScore={currentVitals ? undefined : undefined}
+            />
           </TabsContent>
 
           <TabsContent value="info">
