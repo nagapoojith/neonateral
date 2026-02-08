@@ -19,6 +19,11 @@ import {
   Shield,
   Clock,
   Radio,
+  Thermometer,
+  Users,
+  Utensils,
+  FileText,
+  Volume2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -40,6 +45,11 @@ const navItems = [
   { path: '/alerts', label: 'Alerts', icon: Bell },
   { path: '/history', label: 'Alert History', icon: History },
   { path: '/live-monitoring', label: 'IoT Monitoring', icon: Radio },
+  { path: '/cry-detection', label: 'Cry Detection', icon: Volume2 },
+  { path: '/nicu-environment', label: 'NICU Incubator Overview', icon: Thermometer, doctorOnly: true },
+  { path: '/shift-handover', label: 'Shift & Handover', icon: Users },
+  { path: '/feeding-status', label: 'Feeding Status', icon: Utensils },
+  { path: '/health-records', label: 'Health Records', icon: FileText },
 ];
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {

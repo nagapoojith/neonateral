@@ -527,6 +527,51 @@ function generateEmailHTML(request: AlertEmailRequest, content: GeneratedContent
   `;
 }
 
+async function sendWithRetry(emailPayload: any, apiKey: string, maxRetries = 3): Promise<any> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Brevo send attempt ${attempt}/${maxRetries}...`);
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "api-key": apiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(emailPayload),
+      });
+
+      const result = await response.json();
+      console.log(`Brevo attempt ${attempt} response:`, JSON.stringify(result));
+
+      if (response.ok) {
+        return { success: true, result };
+      }
+
+      // If it's a permanent error (not transient), don't retry
+      if (response.status === 400 || response.status === 401) {
+        return { success: false, error: `Brevo API error (${response.status}): ${JSON.stringify(result)}` };
+      }
+
+      // Transient error, wait before retrying
+      if (attempt < maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        return { success: false, error: `Brevo API error after ${maxRetries} attempts: ${JSON.stringify(result)}` };
+      }
+    } catch (fetchError: any) {
+      console.error(`Fetch error on attempt ${attempt}:`, fetchError.message);
+      if (attempt === maxRetries) {
+        return { success: false, error: `Network error after ${maxRetries} attempts: ${fetchError.message}` };
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+  return { success: false, error: "Unexpected retry loop exit" };
+}
+
 serve(async (req) => {
   console.log("=== SEND-ALERT-EMAIL FUNCTION STARTED ===");
 
@@ -543,44 +588,51 @@ serve(async (req) => {
     }
 
     const request: AlertEmailRequest = await req.json();
-    console.log("Alert request:", JSON.stringify(request, null, 2));
+    console.log("Alert request received:", JSON.stringify({
+      to: request.to,
+      babyName: request.babyName,
+      alertType: request.alertType,
+      triggerReason: request.triggerReason,
+    }));
+
+    // Both HIGH and CRITICAL alerts get sent
+    const isHighPriority = request.alertType === 'critical' || request.alertType === 'high';
+    console.log(`Alert type: ${request.alertType}, isHighPriority: ${isHighPriority}`);
 
     const content = await generateAIContent(request, LOVABLE_API_KEY || "");
-
     const htmlContent = generateEmailHTML(request, content);
 
     const alertBadge = getAlertTypeBadge(request.alertType);
-    const subject = `🚨 [${alertBadge.label}] NICU ALERT | Baby ${request.babyName} | Bed ${request.bedNumber}`;
+    const priorityTag = isHighPriority ? ' [HIGH PRIORITY]' : '';
+    const subject = `🚨 [${alertBadge.label}]${priorityTag} NICU ALERT | Baby ${request.babyName} | Bed ${request.bedNumber}`;
 
     const emailPayload = {
       sender: { name: "NeoGuard NICU", email: "nagapoojithtn@gmail.com" },
       to: [{ email: request.to }],
       subject,
       htmlContent,
+      headers: isHighPriority ? {
+        "X-Priority": "1",
+        "X-MSMail-Priority": "High",
+        "Importance": "High",
+      } : undefined,
     };
 
-    console.log("Sending email via Brevo...");
-    const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        "accept": "application/json",
-        "api-key": BREVO_API_KEY,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(emailPayload),
-    });
+    console.log(`Sending ${request.alertType} email to ${request.to}...`);
+    const sendResult = await sendWithRetry(emailPayload, BREVO_API_KEY);
 
-    const brevoResult = await brevoResponse.json();
-    console.log("Brevo response:", JSON.stringify(brevoResult));
-
-    if (!brevoResponse.ok) {
-      throw new Error(`Brevo API error: ${JSON.stringify(brevoResult)}`);
+    if (!sendResult.success) {
+      console.error("Email send failed:", sendResult.error);
+      throw new Error(sendResult.error);
     }
+
+    console.log(`✅ ${request.alertType.toUpperCase()} alert email sent successfully to ${request.to}`);
 
     return new Response(JSON.stringify({ 
       success: true, 
-      messageId: brevoResult.messageId,
-      message: "Alert email sent successfully"
+      messageId: sendResult.result?.messageId,
+      message: `${request.alertType.toUpperCase()} alert email sent successfully`,
+      alertType: request.alertType,
     }), {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
