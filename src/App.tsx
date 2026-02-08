@@ -17,6 +17,11 @@ import AlertHistory from "./pages/AlertHistory";
 import ParentLogin from "./pages/ParentLogin";
 import ParentPortal from "./pages/ParentPortal";
 import LiveMonitoring from "./pages/LiveMonitoring";
+import NICUEnvironment from "./pages/NICUEnvironment";
+import ShiftHandover from "./pages/ShiftHandover";
+import FeedingStatusPage from "./pages/FeedingStatus";
+import HealthRecords from "./pages/HealthRecords";
+import CryDetectionPage from "./pages/CryDetectionPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -159,6 +164,47 @@ const AppRoutes = () => {
       <Route path="/parent/portal" element={<ParentPortal />} />
       {/* Live IoT Monitoring - Public access for demo/presentation */}
       <Route path="/live-monitoring" element={<LiveMonitoring />} />
+      {/* New System-Level Pages */}
+      <Route
+        path="/cry-detection"
+        element={
+          <ProtectedRoute>
+            <CryDetectionPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/nicu-environment"
+        element={
+          <ProtectedRoute>
+            <NICUEnvironment />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shift-handover"
+        element={
+          <ProtectedRoute>
+            <ShiftHandover />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/feeding-status"
+        element={
+          <ProtectedRoute>
+            <FeedingStatusPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/health-records"
+        element={
+          <ProtectedRoute>
+            <HealthRecords />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
