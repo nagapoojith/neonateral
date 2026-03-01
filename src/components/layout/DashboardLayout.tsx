@@ -24,6 +24,8 @@ import {
   Utensils,
   FileText,
   Volume2,
+  Mic,
+  MessageSquare,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -50,6 +52,8 @@ const navItems = [
   { path: '/shift-handover', label: 'Shift & Handover', icon: Users },
   { path: '/feeding-status', label: 'Feeding Status', icon: Utensils },
   { path: '/health-records', label: 'Health Records', icon: FileText },
+  { path: '/voice-assistant', label: 'Voice Assistant', icon: Mic },
+  { path: '/ai-chatbot', label: 'AI Chatbot', icon: MessageSquare },
 ];
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {

@@ -22,6 +22,8 @@ import ShiftHandover from "./pages/ShiftHandover";
 import FeedingStatusPage from "./pages/FeedingStatus";
 import HealthRecords from "./pages/HealthRecords";
 import CryDetectionPage from "./pages/CryDetectionPage";
+import VoiceAssistant from "./pages/VoiceAssistant";
+import AIChatbot from "./pages/AIChatbot";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -202,6 +204,22 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <HealthRecords />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/voice-assistant"
+        element={
+          <ProtectedRoute>
+            <VoiceAssistant />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ai-chatbot"
+        element={
+          <ProtectedRoute>
+            <AIChatbot />
           </ProtectedRoute>
         }
       />
