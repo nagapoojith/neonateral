@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.parent-chatbot]
 verify_jwt = false
+
+[functions.neo-voice-chat]
+verify_jwt = false
