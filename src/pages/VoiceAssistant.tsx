@@ -22,10 +22,16 @@ const VoiceAssistant: React.FC = () => {
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number>();
+  const transcriptRef = useRef('');
+  const messagesRef = useRef<Message[]>([]);
   const { toast } = useToast();
 
   const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   const speechSupported = !!SpeechRecognition;
+
+  // Keep refs in sync
+  useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   // Waveform animation
   useEffect(() => {
@@ -66,7 +72,7 @@ const VoiceAssistant: React.FC = () => {
     const userMsg: Message = { role: 'user', content: userText, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
 
-    const chatHistory = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
+    const chatHistory = [...messagesRef.current, userMsg].map(m => ({ role: m.role, content: m.content }));
     let assistantText = '';
 
     try {
@@ -124,32 +130,41 @@ const VoiceAssistant: React.FC = () => {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
       setStatus('idle');
     }
-  }, [messages, speakText, toast]);
+  }, [speakText, toast]);
 
   const startListening = useCallback(() => {
     if (!speechSupported) {
       toast({ title: 'Not Supported', description: 'Speech recognition requires Chrome, Edge, or Safari.', variant: 'destructive' });
       return;
     }
+
+    // Reset transcript
+    setTranscript('');
+    transcriptRef.current = '';
+
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
     recognition.onstart = () => setStatus('listening');
+
     recognition.onresult = (e: any) => {
       const result = Array.from(e.results).map((r: any) => r[0].transcript).join('');
       setTranscript(result);
+      transcriptRef.current = result;
     };
+
     recognition.onend = () => {
-      const finalText = transcript;
+      const finalText = transcriptRef.current;
+      setTranscript('');
       if (finalText.trim()) {
         sendToAI(finalText.trim());
       } else {
         setStatus('idle');
       }
-      setTranscript('');
     };
+
     recognition.onerror = (e: any) => {
       console.error('Speech error:', e.error);
       setStatus('idle');
@@ -160,26 +175,7 @@ const VoiceAssistant: React.FC = () => {
 
     recognitionRef.current = recognition;
     recognition.start();
-  }, [SpeechRecognition, speechSupported, transcript, sendToAI, toast]);
-
-  // We need the latest transcript in onend, so use a ref
-  const transcriptRef = useRef(transcript);
-  transcriptRef.current = transcript;
-
-  // Override recognition onend to use ref
-  useEffect(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.onend = () => {
-        const finalText = transcriptRef.current;
-        if (finalText.trim()) {
-          sendToAI(finalText.trim());
-        } else {
-          setStatus('idle');
-        }
-        setTranscript('');
-      };
-    }
-  }, [sendToAI]);
+  }, [SpeechRecognition, speechSupported, sendToAI, toast]);
 
   const stopListening = () => {
     recognitionRef.current?.stop();
