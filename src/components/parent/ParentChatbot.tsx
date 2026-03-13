@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Send, Bot, User, AlertTriangle, MapPin, Loader2, Globe } from 'lucide-react';
+import { Send, Bot, User, AlertTriangle, MapPin, Loader2, Globe, Mic, MicOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Message {
@@ -105,8 +105,53 @@ const ParentChatbot: React.FC<ParentChatbotProps> = ({ babyName, onShowHospitals
   const [isLoading, setIsLoading] = useState(false);
   const [symptomTracker, setSymptomTracker] = useState<SymptomTracker>({});
   const [showEscalationWarning, setShowEscalationWarning] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const speechSupported = !!SpeechRecognition;
+
+  const toggleMic = () => {
+    if (!speechSupported) {
+      toast.error('Voice input requires Chrome, Edge, or Safari.');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = language === 'hindi' ? 'hi-IN' : language === 'tamil' ? 'ta-IN' : language === 'telugu' ? 'te-IN' : language === 'malayalam' ? 'ml-IN' : 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (e: any) => {
+      const result = Array.from(e.results).map((r: any) => r[0].transcript).join('');
+      setInput(result);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      // Auto-send after voice input
+      setTimeout(() => {
+        if (inputRef.current && inputRef.current.value.trim()) {
+          handleSend();
+        }
+      }, 150);
+    };
+    recognition.onerror = (e: any) => {
+      setIsListening(false);
+      if (e.error !== 'no-speech') toast.error(`Speech error: ${e.error}`);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
 
   // Update greeting when language changes
   const handleLanguageChange = (newLang: Language) => {
@@ -440,16 +485,35 @@ const ParentChatbot: React.FC<ParentChatbotProps> = ({ babyName, onShowHospitals
 
         {/* Input Area */}
         <div className="p-4 border-t border-sky-100 bg-white/80 backdrop-blur-sm">
+          {isListening && (
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              <span className="text-xs text-rose-600 font-medium">Listening...</span>
+            </div>
+          )}
           <div className="flex gap-2">
-            <Input
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={PLACEHOLDER_TEXT[language]}
-              className="flex-1 rounded-xl border-sky-200 focus:border-sky-400 focus:ring-sky-400"
-              disabled={isLoading}
-            />
+            <div className="relative flex-1">
+              <Input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={PLACEHOLDER_TEXT[language]}
+                className="flex-1 rounded-xl border-sky-200 focus:border-sky-400 focus:ring-sky-400 pr-10"
+                disabled={isLoading}
+              />
+              {speechSupported && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={toggleMic}
+                  disabled={isLoading}
+                  className={`absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg ${isListening ? 'text-rose-500' : 'text-sky-500'}`}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              )}
+            </div>
             <Button
               onClick={handleSend}
               disabled={!input.trim() || isLoading}

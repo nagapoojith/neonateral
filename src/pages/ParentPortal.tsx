@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Baby, MessageCircle, MapPin, AlertTriangle, Heart, ArrowLeft, Volume2 } from 'lucide-react';
+import { Baby, MessageCircle, MapPin, AlertTriangle, Heart, ArrowLeft, Volume2, Mic } from 'lucide-react';
 import ParentChatbot from '@/components/parent/ParentChatbot';
 import HospitalMap from '@/components/parent/HospitalMap';
 import CryDetection from '@/components/nicu/CryDetection';
 
+const VoiceAssistantPanel = React.lazy(() => import('@/pages/VoiceAssistant').then(mod => ({ default: mod.VoiceAssistantPanel })));
+
 const ParentPortal = () => {
-  const [activeTab, setActiveTab] = useState<'chatbot' | 'hospitals' | 'cry'>('chatbot');
+  const [activeTab, setActiveTab] = useState<'chatbot' | 'hospitals' | 'cry' | 'voice'>('chatbot');
   const [showHospitalMap, setShowHospitalMap] = useState(false);
 
   const handleShowHospitals = () => {
@@ -96,6 +98,14 @@ const ParentPortal = () => {
             <MapPin className="w-4 h-4" />
             Find Hospitals
           </Button>
+          <Button
+            variant={activeTab === 'voice' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('voice')}
+            className="gap-2"
+          >
+            <Mic className="w-4 h-4" />
+            Voice Assistant
+          </Button>
         </div>
 
         {activeTab === 'chatbot' ? (
@@ -104,6 +114,10 @@ const ParentPortal = () => {
           />
         ) : activeTab === 'cry' ? (
           <CryDetection showConfidence={false} />
+        ) : activeTab === 'voice' ? (
+          <React.Suspense fallback={<div className="text-center py-12 text-muted-foreground">Loading...</div>}>
+            <VoiceAssistantPanel />
+          </React.Suspense>
         ) : (
           <HospitalMap />
         )}

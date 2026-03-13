@@ -23,7 +23,6 @@ import FeedingStatusPage from "./pages/FeedingStatus";
 import HealthRecords from "./pages/HealthRecords";
 import CryDetectionPage from "./pages/CryDetectionPage";
 import VoiceAssistant from "./pages/VoiceAssistant";
-import AIChatbot from "./pages/AIChatbot";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -209,19 +208,7 @@ const AppRoutes = () => {
       />
       <Route
         path="/voice-assistant"
-        element={
-          <ProtectedRoute>
-            <VoiceAssistant />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ai-chatbot"
-        element={
-          <ProtectedRoute>
-            <AIChatbot />
-          </ProtectedRoute>
-        }
+        element={<VoiceAssistant />}
       />
       <Route path="*" element={<NotFound />} />
     </Routes>
