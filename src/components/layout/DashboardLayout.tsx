@@ -24,8 +24,6 @@ import {
   Utensils,
   FileText,
   Volume2,
-  Mic,
-  MessageSquare,
 } from 'lucide-react';
 import {
   DropdownMenu,
