@@ -10,7 +10,7 @@ import CryDetection from '@/components/nicu/CryDetection';
 const VoiceAssistantPanel = React.lazy(() => import('@/pages/VoiceAssistant').then(mod => ({ default: mod.VoiceAssistantPanel })));
 
 const ParentPortal = () => {
-  const [activeTab, setActiveTab] = useState<'chatbot' | 'hospitals' | 'cry'>('chatbot');
+  const [activeTab, setActiveTab] = useState<'chatbot' | 'hospitals' | 'cry' | 'voice'>('chatbot');
   const [showHospitalMap, setShowHospitalMap] = useState(false);
 
   const handleShowHospitals = () => {
