@@ -485,16 +485,35 @@ const ParentChatbot: React.FC<ParentChatbotProps> = ({ babyName, onShowHospitals
 
         {/* Input Area */}
         <div className="p-4 border-t border-sky-100 bg-white/80 backdrop-blur-sm">
+          {isListening && (
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              <span className="text-xs text-rose-600 font-medium">Listening...</span>
+            </div>
+          )}
           <div className="flex gap-2">
-            <Input
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={PLACEHOLDER_TEXT[language]}
-              className="flex-1 rounded-xl border-sky-200 focus:border-sky-400 focus:ring-sky-400"
-              disabled={isLoading}
-            />
+            <div className="relative flex-1">
+              <Input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={PLACEHOLDER_TEXT[language]}
+                className="flex-1 rounded-xl border-sky-200 focus:border-sky-400 focus:ring-sky-400 pr-10"
+                disabled={isLoading}
+              />
+              {speechSupported && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={toggleMic}
+                  disabled={isLoading}
+                  className={`absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg ${isListening ? 'text-rose-500' : 'text-sky-500'}`}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              )}
+            </div>
             <Button
               onClick={handleSend}
               disabled={!input.trim() || isLoading}
