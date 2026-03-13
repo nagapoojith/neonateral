@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Baby, MessageCircle, MapPin, AlertTriangle, Heart, ArrowLeft, Volume2 } from 'lucide-react';
+import { Baby, MessageCircle, MapPin, AlertTriangle, Heart, ArrowLeft, Volume2, Mic } from 'lucide-react';
 import ParentChatbot from '@/components/parent/ParentChatbot';
 import HospitalMap from '@/components/parent/HospitalMap';
 import CryDetection from '@/components/nicu/CryDetection';
+
+const VoiceAssistantPanel = React.lazy(() => import('@/pages/VoiceAssistant').then(mod => ({ default: mod.VoiceAssistantPanel })));
 
 const ParentPortal = () => {
   const [activeTab, setActiveTab] = useState<'chatbot' | 'hospitals' | 'cry'>('chatbot');
