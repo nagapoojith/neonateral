@@ -199,9 +199,12 @@ const VoiceAssistant: React.FC = () => {
     speaking: { label: 'Speaking...', color: 'bg-chart-4/20 text-chart-4' },
   };
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
+// Standalone panel version (no DashboardLayout wrapper)
+export const VoiceAssistantPanel: React.FC = () => {
+  return <VoiceAssistantContent />;
+};
+
+const VoiceAssistantContent: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Voice Assistant</h1>
