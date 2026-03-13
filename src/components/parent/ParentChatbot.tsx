@@ -105,8 +105,53 @@ const ParentChatbot: React.FC<ParentChatbotProps> = ({ babyName, onShowHospitals
   const [isLoading, setIsLoading] = useState(false);
   const [symptomTracker, setSymptomTracker] = useState<SymptomTracker>({});
   const [showEscalationWarning, setShowEscalationWarning] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const speechSupported = !!SpeechRecognition;
+
+  const toggleMic = () => {
+    if (!speechSupported) {
+      toast.error('Voice input requires Chrome, Edge, or Safari.');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = language === 'hindi' ? 'hi-IN' : language === 'tamil' ? 'ta-IN' : language === 'telugu' ? 'te-IN' : language === 'malayalam' ? 'ml-IN' : 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (e: any) => {
+      const result = Array.from(e.results).map((r: any) => r[0].transcript).join('');
+      setInput(result);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      // Auto-send after voice input
+      setTimeout(() => {
+        if (inputRef.current && inputRef.current.value.trim()) {
+          handleSend();
+        }
+      }, 150);
+    };
+    recognition.onerror = (e: any) => {
+      setIsListening(false);
+      if (e.error !== 'no-speech') toast.error(`Speech error: ${e.error}`);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
 
   // Update greeting when language changes
   const handleLanguageChange = (newLang: Language) => {
