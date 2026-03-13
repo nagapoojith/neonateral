@@ -208,19 +208,7 @@ const AppRoutes = () => {
       />
       <Route
         path="/voice-assistant"
-        element={
-          <ProtectedRoute>
-            <VoiceAssistant />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ai-chatbot"
-        element={
-          <ProtectedRoute>
-            <AIChatbot />
-          </ProtectedRoute>
-        }
+        element={<VoiceAssistant />}
       />
       <Route path="*" element={<NotFound />} />
     </Routes>
