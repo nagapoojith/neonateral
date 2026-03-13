@@ -98,6 +98,14 @@ const ParentPortal = () => {
             <MapPin className="w-4 h-4" />
             Find Hospitals
           </Button>
+          <Button
+            variant={activeTab === 'voice' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('voice')}
+            className="gap-2"
+          >
+            <Mic className="w-4 h-4" />
+            Voice Assistant
+          </Button>
         </div>
 
         {activeTab === 'chatbot' ? (
