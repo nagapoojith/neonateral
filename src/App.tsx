@@ -23,7 +23,6 @@ import FeedingStatusPage from "./pages/FeedingStatus";
 import HealthRecords from "./pages/HealthRecords";
 import CryDetectionPage from "./pages/CryDetectionPage";
 import VoiceAssistant from "./pages/VoiceAssistant";
-import AIChatbot from "./pages/AIChatbot";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
