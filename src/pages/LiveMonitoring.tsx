@@ -93,24 +93,15 @@ const LiveMonitoring: React.FC = () => {
   };
 
   const fetchLatestData = useCallback(async () => {
-    if (!apiKey) return;
     try {
       setIsRefreshing(true);
       setError(null);
 
-      const latestUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${apiKey}&results=1`;
+      const latestUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${THINGSPEAK_API_KEY}&results=1`;
       const latestResponse = await fetch(latestUrl);
-
-      if (latestResponse.status === 401 || latestResponse.status === 403) {
-        setApiKeyValid(false);
-        setShowApiKeySetup(true);
-        setError('Invalid API key. Please enter a valid ThingSpeak Read API Key.');
-        return;
-      }
 
       if (!latestResponse.ok) throw new Error('Failed to fetch from ThingSpeak');
 
-      setApiKeyValid(true);
       const latestData: ThingSpeakResponse = await latestResponse.json();
 
       if (!latestData.feeds || latestData.feeds.length === 0) {
@@ -142,12 +133,11 @@ const LiveMonitoring: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [apiKey, previousEntryId]);
+  }, [previousEntryId]);
 
   const fetchHistoricalData = useCallback(async () => {
-    if (!apiKey) return;
     try {
-      const historyUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${apiKey}&results=${HISTORY_COUNT}`;
+      const historyUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${THINGSPEAK_API_KEY}&results=${HISTORY_COUNT}`;
       const historyResponse = await fetch(historyUrl);
       if (!historyResponse.ok) return;
 
@@ -169,31 +159,16 @@ const LiveMonitoring: React.FC = () => {
     } catch (err) {
       console.error('Error fetching historical data:', err);
     }
-  }, [apiKey]);
+  }, []);
 
   useEffect(() => {
-    if (!apiKey || showApiKeySetup) return;
     fetchLatestData();
     fetchHistoricalData();
     const interval = setInterval(() => { fetchLatestData(); fetchHistoricalData(); }, REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [apiKey, showApiKeySetup, fetchLatestData, fetchHistoricalData]);
+  }, [fetchLatestData, fetchHistoricalData]);
 
-  const handleApiKeySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = apiKeyInput.trim();
-    if (!trimmed) return;
-    localStorage.setItem(API_KEY_STORAGE_KEY, trimmed);
-    setApiKey(trimmed);
-    setApiKeyValid(null);
-    setShowApiKeySetup(false);
-    setError(null);
-  };
-
-  const handleChangeApiKey = () => {
-    setApiKeyInput(apiKey);
-    setShowApiKeySetup(true);
-  };
+  const handleManualRefresh = () => { fetchLatestData(); fetchHistoricalData(); };
 
   const handleManualRefresh = () => { fetchLatestData(); fetchHistoricalData(); };
 
