@@ -170,8 +170,6 @@ const LiveMonitoring: React.FC = () => {
 
   const handleManualRefresh = () => { fetchLatestData(); fetchHistoricalData(); };
 
-  const handleManualRefresh = () => { fetchLatestData(); fetchHistoricalData(); };
-
   const getStatusBadge = () => {
     switch (deviceStatus) {
       case 'online':
