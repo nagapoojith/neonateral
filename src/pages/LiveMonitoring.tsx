@@ -199,9 +199,6 @@ const LiveMonitoring: React.FC = () => {
             </div>
             <div className="flex items-center gap-3">
               {getStatusBadge()}
-              <Button variant="outline" size="sm" onClick={handleChangeApiKey} className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
-                <Key className="h-4 w-4 mr-1" /> API Key
-              </Button>
               <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={isRefreshing} className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
               </Button>
