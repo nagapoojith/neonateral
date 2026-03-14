@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Activity, Heart, Thermometer, Wind, Wifi, WifiOff, Clock, RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Activity, Heart, Thermometer, Wind, Wifi, WifiOff, Clock, RefreshCw, Droplets, Box, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -16,9 +16,9 @@ import {
 } from 'recharts';
 
 const THINGSPEAK_CHANNEL_ID = '3242355';
-const THINGSPEAK_API_KEY = 'DXDNPGTNJC504SX4';
-const REFRESH_INTERVAL = 15000; // 15 seconds
-const HISTORY_COUNT = 100; // Fetch last 100 entries for graphs
+const REFRESH_INTERVAL = 15000;
+const HISTORY_COUNT = 100;
+const API_KEY_STORAGE_KEY = 'neoguard_thingspeak_api_key';
 
 interface ThingSpeakEntry {
   created_at: string;
@@ -27,6 +27,7 @@ interface ThingSpeakEntry {
   field2: string | null;
   field3: string | null;
   field4: string | null;
+  field5: string | null;
 }
 
 interface ThingSpeakResponse {
@@ -45,6 +46,8 @@ interface VitalData {
   heartRate: number | null;
   spo2: number | null;
   temperature: number | null;
+  incubatorHumidity: number | null;
+  incubatorTemperature: number | null;
   timestamp: string | null;
   entryId: number | null;
 }
@@ -60,12 +63,15 @@ interface ChartDataPoint {
 type DeviceStatus = 'online' | 'offline' | 'waiting';
 
 const LiveMonitoring: React.FC = () => {
+  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem(API_KEY_STORAGE_KEY) || '');
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [apiKeyValid, setApiKeyValid] = useState<boolean | null>(null);
+  const [showApiKeySetup, setShowApiKeySetup] = useState(!apiKey);
+
   const [currentVitals, setCurrentVitals] = useState<VitalData>({
-    heartRate: null,
-    spo2: null,
-    temperature: null,
-    timestamp: null,
-    entryId: null,
+    heartRate: null, spo2: null, temperature: null,
+    incubatorHumidity: null, incubatorTemperature: null,
+    timestamp: null, entryId: null,
   });
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>('waiting');
@@ -74,66 +80,66 @@ const LiveMonitoring: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [previousEntryId, setPreviousEntryId] = useState<number | null>(null);
 
+  const validateAndParseEntry = (entry: ThingSpeakEntry) => {
+    const parseField = (val: string | null) => val ? parseFloat(val) : null;
+
+    const hrRaw = parseField(entry.field1);
+    const spo2Raw = parseField(entry.field2);
+    const tempRaw = parseField(entry.field3);
+    const incHumRaw = parseField(entry.field4);
+    const incTempRaw = parseField(entry.field5);
+
+    return {
+      heartRate: hrRaw !== null && !isNaN(hrRaw) && hrRaw > 0 && hrRaw < 300 ? hrRaw : null,
+      spo2: spo2Raw !== null && !isNaN(spo2Raw) && spo2Raw > 0 && spo2Raw <= 100 ? spo2Raw : null,
+      temperature: tempRaw !== null && !isNaN(tempRaw) && tempRaw > -50 && tempRaw < 50 ? tempRaw : null,
+      incubatorHumidity: incHumRaw !== null && !isNaN(incHumRaw) && incHumRaw >= 0 && incHumRaw <= 100 ? incHumRaw : null,
+      incubatorTemperature: incTempRaw !== null && !isNaN(incTempRaw) && incTempRaw > -10 && incTempRaw < 60 ? incTempRaw : null,
+    };
+  };
+
   const fetchLatestData = useCallback(async () => {
+    if (!apiKey) return;
     try {
       setIsRefreshing(true);
       setError(null);
 
-      // Fetch latest single entry for current vitals
-      const latestUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${THINGSPEAK_API_KEY}&results=1`;
+      const latestUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${apiKey}&results=1`;
       const latestResponse = await fetch(latestUrl);
-      
-      if (!latestResponse.ok) {
-        throw new Error('Failed to fetch from ThingSpeak');
+
+      if (latestResponse.status === 401 || latestResponse.status === 403) {
+        setApiKeyValid(false);
+        setShowApiKeySetup(true);
+        setError('Invalid API key. Please enter a valid ThingSpeak Read API Key.');
+        return;
       }
 
+      if (!latestResponse.ok) throw new Error('Failed to fetch from ThingSpeak');
+
+      setApiKeyValid(true);
       const latestData: ThingSpeakResponse = await latestResponse.json();
-      
+
       if (!latestData.feeds || latestData.feeds.length === 0) {
         setDeviceStatus('offline');
-        setCurrentVitals({
-          heartRate: null,
-          spo2: null,
-          temperature: null,
-          timestamp: null,
-          entryId: null,
-        });
+        setCurrentVitals({ heartRate: null, spo2: null, temperature: null, incubatorHumidity: null, incubatorTemperature: null, timestamp: null, entryId: null });
         return;
       }
 
       const latestEntry = latestData.feeds[0];
-      const entryTimestamp = new Date(latestEntry.created_at);
-      const now = new Date();
-      const timeDiff = (now.getTime() - entryTimestamp.getTime()) / 1000; // seconds
+      const timeDiff = (Date.now() - new Date(latestEntry.created_at).getTime()) / 1000;
 
-      // Check if data is stale (more than 60 seconds old)
-      if (timeDiff > 60) {
-        setDeviceStatus('offline');
-      } else if (previousEntryId !== null && latestEntry.entry_id === previousEntryId) {
-        // No new data since last fetch
-        setDeviceStatus('waiting');
-      } else {
-        setDeviceStatus('online');
-      }
+      if (timeDiff > 60) setDeviceStatus('offline');
+      else if (previousEntryId !== null && latestEntry.entry_id === previousEntryId) setDeviceStatus('waiting');
+      else setDeviceStatus('online');
 
       setPreviousEntryId(latestEntry.entry_id);
-
-      const heartRateRaw = latestEntry.field1 ? parseFloat(latestEntry.field1) : null;
-      const spo2Raw = latestEntry.field2 ? parseFloat(latestEntry.field2) : null;
-      const temperatureRaw = latestEntry.field3 ? parseFloat(latestEntry.field3) : null;
-
-      const heartRate = heartRateRaw !== null && !isNaN(heartRateRaw) && heartRateRaw > 0 && heartRateRaw < 300 ? heartRateRaw : null;
-      const spo2 = spo2Raw !== null && !isNaN(spo2Raw) && spo2Raw > 0 && spo2Raw <= 100 ? spo2Raw : null;
-      const temperature = temperatureRaw !== null && !isNaN(temperatureRaw) && temperatureRaw > -50 && temperatureRaw < 50 ? temperatureRaw : null;
+      const parsed = validateAndParseEntry(latestEntry);
 
       setCurrentVitals({
-        heartRate: heartRate,
-        spo2: spo2,
-        temperature: temperature,
+        ...parsed,
         timestamp: latestEntry.created_at,
         entryId: latestEntry.entry_id,
       });
-
       setLastFetchTime(new Date());
     } catch (err) {
       console.error('Error fetching ThingSpeak data:', err);
@@ -142,217 +148,118 @@ const LiveMonitoring: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [previousEntryId]);
+  }, [apiKey, previousEntryId]);
 
   const fetchHistoricalData = useCallback(async () => {
+    if (!apiKey) return;
     try {
-      const historyUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${THINGSPEAK_API_KEY}&results=${HISTORY_COUNT}`;
+      const historyUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${apiKey}&results=${HISTORY_COUNT}`;
       const historyResponse = await fetch(historyUrl);
-      
-      if (!historyResponse.ok) {
-        throw new Error('Failed to fetch historical data');
-      }
+      if (!historyResponse.ok) return;
 
       const historyData: ThingSpeakResponse = await historyResponse.json();
-      
-      if (!historyData.feeds || historyData.feeds.length === 0) {
-        setChartData([]);
-        return;
-      }
+      if (!historyData.feeds || historyData.feeds.length === 0) { setChartData([]); return; }
 
       const formattedData: ChartDataPoint[] = historyData.feeds.map((entry) => {
         const timestamp = new Date(entry.created_at);
-        
-        const heartRateRaw = entry.field1 ? parseFloat(entry.field1) : null;
-        const spo2Raw = entry.field2 ? parseFloat(entry.field2) : null;
-        const temperatureRaw = entry.field3 ? parseFloat(entry.field3) : null;
-
-        const heartRate = heartRateRaw !== null && !isNaN(heartRateRaw) && heartRateRaw > 0 && heartRateRaw < 300 ? heartRateRaw : null;
-        const spo2 = spo2Raw !== null && !isNaN(spo2Raw) && spo2Raw > 0 && spo2Raw <= 100 ? spo2Raw : null;
-        const temperature = temperatureRaw !== null && !isNaN(temperatureRaw) && temperatureRaw > -50 && temperatureRaw < 50 ? temperatureRaw : null;
-
+        const parsed = validateAndParseEntry(entry);
         return {
           time: timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
           fullTime: timestamp.toLocaleString(),
-          heartRate: heartRate,
-          spo2: spo2,
-          temperature: temperature,
+          heartRate: parsed.heartRate,
+          spo2: parsed.spo2,
+          temperature: parsed.temperature,
         };
       });
-
       setChartData(formattedData);
     } catch (err) {
       console.error('Error fetching historical data:', err);
     }
-  }, []);
+  }, [apiKey]);
 
   useEffect(() => {
-    // Initial fetch
+    if (!apiKey || showApiKeySetup) return;
     fetchLatestData();
     fetchHistoricalData();
-
-    // Set up interval for auto-refresh
-    const interval = setInterval(() => {
-      fetchLatestData();
-      fetchHistoricalData();
-    }, REFRESH_INTERVAL);
-
+    const interval = setInterval(() => { fetchLatestData(); fetchHistoricalData(); }, REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [fetchLatestData, fetchHistoricalData]);
+  }, [apiKey, showApiKeySetup, fetchLatestData, fetchHistoricalData]);
 
-  const handleManualRefresh = () => {
-    fetchLatestData();
-    fetchHistoricalData();
+  const handleApiKeySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = apiKeyInput.trim();
+    if (!trimmed) return;
+    localStorage.setItem(API_KEY_STORAGE_KEY, trimmed);
+    setApiKey(trimmed);
+    setApiKeyValid(null);
+    setShowApiKeySetup(false);
+    setError(null);
   };
+
+  const handleChangeApiKey = () => {
+    setApiKeyInput(apiKey);
+    setShowApiKeySetup(true);
+  };
+
+  const handleManualRefresh = () => { fetchLatestData(); fetchHistoricalData(); };
 
   const getStatusBadge = () => {
     switch (deviceStatus) {
       case 'online':
-        return (
-          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1.5 px-3 py-1">
-            <Wifi className="h-3.5 w-3.5" />
-            Live Monitoring
-          </Badge>
-        );
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1.5 px-3 py-1"><Wifi className="h-3.5 w-3.5" />Live</Badge>;
       case 'waiting':
-        return (
-          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 gap-1.5 px-3 py-1">
-            <Clock className="h-3.5 w-3.5" />
-            Waiting for Hardware Data
-          </Badge>
-        );
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 gap-1.5 px-3 py-1"><Clock className="h-3.5 w-3.5" />Waiting</Badge>;
       case 'offline':
-        return (
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/30 gap-1.5 px-3 py-1">
-            <WifiOff className="h-3.5 w-3.5" />
-            Device Offline
-          </Badge>
-        );
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 gap-1.5 px-3 py-1"><WifiOff className="h-3.5 w-3.5" />Offline</Badge>;
     }
   };
 
-  const VitalCard: React.FC<{
-    title: string;
-    value: number | null;
-    unit: string;
-    icon: React.ReactNode;
-    color: string;
-    normalRange?: { min: number; max: number };
-  }> = ({ title, value, unit, icon, color, normalRange }) => {
-    const isOffline = value === null;
-    const isOutOfRange = normalRange && value !== null && (value < normalRange.min || value > normalRange.max);
-
+  // === API Key Setup Screen ===
+  if (showApiKeySetup) {
     return (
-      <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm overflow-hidden">
-        <div className={`h-1 w-full ${isOffline ? 'bg-slate-600' : isOutOfRange ? 'bg-red-500' : color}`} />
-        <CardHeader className="pb-2 pt-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className={`p-2 rounded-lg ${isOffline ? 'bg-slate-700' : `${color.replace('bg-', 'bg-')}/20`}`}>
-                {icon}
-              </div>
-              <CardTitle className="text-sm font-medium text-slate-300">{title}</CardTitle>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-slate-900/80 border-slate-700/50 backdrop-blur-sm">
+          <CardHeader className="text-center space-y-3">
+            <div className="mx-auto p-4 rounded-2xl bg-cyan-500/10 w-fit">
+              <Key className="h-10 w-10 text-cyan-400" />
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pb-4">
-          <div className="flex items-baseline gap-1">
-            <span className={`text-4xl font-bold tabular-nums ${isOffline ? 'text-slate-500' : isOutOfRange ? 'text-red-400' : 'text-white'}`}>
-              {isOffline ? '--' : value}
-            </span>
-            <span className="text-lg text-slate-400">{unit}</span>
-          </div>
-          {normalRange && !isOffline && (
-            <p className="text-xs text-slate-500 mt-1">
-              Normal: {normalRange.min} - {normalRange.max} {unit}
+            <CardTitle className="text-2xl font-bold text-white">ThingSpeak API Key</CardTitle>
+            <p className="text-sm text-slate-400">
+              Enter your ThingSpeak Read API Key to connect to the neonatal monitoring hardware.
             </p>
-          )}
-          {isOffline && (
-            <p className="text-xs text-slate-500 mt-1">No sensor data available</p>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const VitalChart: React.FC<{
-    title: string;
-    dataKey: keyof ChartDataPoint;
-    color: string;
-    unit: string;
-    data: ChartDataPoint[];
-  }> = ({ title, dataKey, color, unit, data }) => {
-    const validData = data.filter(d => d[dataKey] !== null);
-    
-    if (validData.length === 0) {
-      return (
-        <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-300">{title}</CardTitle>
           </CardHeader>
-          <CardContent className="h-48 flex items-center justify-center">
-            <p className="text-slate-500 text-sm">No historical data available</p>
+          <CardContent>
+            <form onSubmit={handleApiKeySubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="apiKey" className="text-slate-300">Read API Key</Label>
+                <Input
+                  id="apiKey"
+                  type="text"
+                  placeholder="e.g. DXDNPGTNJC504SX4"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 focus:border-cyan-500"
+                />
+              </div>
+              {apiKeyValid === false && (
+                <p className="text-red-400 text-sm">Invalid API key. Please check and try again.</p>
+              )}
+              <div className="text-xs text-slate-500 space-y-1">
+                <p>• Find this key in your ThingSpeak channel → API Keys tab</p>
+                <p>• Channel ID: {THINGSPEAK_CHANNEL_ID}</p>
+                <p>• Fields: Heart Rate, SpO2, Temperature, Incubator Humidity, Incubator Temp</p>
+              </div>
+              <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" disabled={!apiKeyInput.trim()}>
+                Connect to ThingSpeak
+              </Button>
+            </form>
           </CardContent>
         </Card>
-      );
-    }
-
-    return (
-      <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-300">{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={validData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-              <defs>
-                <linearGradient id={`gradient-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-                  <stop offset="100%" stopColor={color} stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-              <XAxis 
-                dataKey="time" 
-                tick={{ fontSize: 10, fill: '#64748b' }}
-                tickLine={false}
-                axisLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis 
-                tick={{ fontSize: 10, fill: '#64748b' }}
-                tickLine={false}
-                axisLine={false}
-                domain={['auto', 'auto']}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1e293b',
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  color: '#e2e8f0',
-                }}
-                labelFormatter={(_, payload) => payload[0]?.payload?.fullTime || ''}
-                formatter={(value: number) => [`${value} ${unit}`, title]}
-              />
-              <Area
-                type="monotone"
-                dataKey={dataKey}
-                stroke={color}
-                strokeWidth={2}
-                fill={`url(#gradient-${dataKey})`}
-                dot={false}
-                activeDot={{ r: 4, fill: color, strokeWidth: 2, stroke: '#0f172a' }}
-                connectNulls={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      </div>
     );
-  };
+  }
 
+  // === Main Dashboard ===
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Header */}
@@ -364,143 +271,233 @@ const LiveMonitoring: React.FC = () => {
                 <Activity className="h-6 w-6 text-cyan-400" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Neonatal IoT Monitoring</h1>
-                <p className="text-sm text-slate-400">Real-time NICU Vital Signs</p>
+                <h1 className="text-xl font-bold text-white">NeoGuard NICU Monitoring</h1>
+                <p className="text-sm text-slate-400">Real-time Neonatal Vital Signs & Incubator</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               {getStatusBadge()}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleManualRefresh}
-                disabled={isRefreshing}
-                className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh
+              <Button variant="outline" size="sm" onClick={handleChangeApiKey} className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
+                <Key className="h-4 w-4 mr-1" /> API Key
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={isRefreshing} className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Error Banner */}
         {error && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+          <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
             <p className="text-red-400 text-sm">{error}</p>
           </div>
         )}
 
-        {/* Status Info */}
-        <div className="mb-6 flex flex-wrap items-center gap-4 text-sm text-slate-400">
-          {lastFetchTime && (
-            <span>Last updated: {lastFetchTime.toLocaleTimeString()}</span>
-          )}
-          {currentVitals.timestamp && (
-            <span>Sensor data from: {new Date(currentVitals.timestamp).toLocaleString()}</span>
-          )}
-          {currentVitals.entryId && (
-            <span>Entry ID: #{currentVitals.entryId}</span>
-          )}
-          <span>Auto-refresh: Every 15 seconds</span>
+        {/* Status Bar */}
+        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
+          {lastFetchTime && <span>Last updated: {lastFetchTime.toLocaleTimeString()}</span>}
+          {currentVitals.timestamp && <span>Sensor: {new Date(currentVitals.timestamp).toLocaleString()}</span>}
+          <span>Auto-refresh: 15s</span>
         </div>
 
-        {/* Live Vitals Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <VitalCard
-            title="Heart Rate"
-            value={currentVitals.heartRate}
-            unit="BPM"
-            icon={<Heart className="h-5 w-5 text-rose-400" />}
-            color="bg-rose-500"
-            normalRange={{ min: 100, max: 180 }}
-          />
-          <VitalCard
-            title="Blood Oxygen (SpO₂)"
-            value={currentVitals.spo2}
-            unit="%"
-            icon={<Wind className="h-5 w-5 text-blue-400" />}
-            color="bg-blue-500"
-            normalRange={{ min: 90, max: 100 }}
-          />
-          <VitalCard
-            title="Body Temperature"
-            value={currentVitals.temperature}
-            unit="°C"
-            icon={<Thermometer className="h-5 w-5 text-amber-400" />}
-            color="bg-amber-500"
-            normalRange={{ min: 36.0, max: 37.5 }}
-          />
+        {/* ===== TOP SECTION: Vital Signs Cards ===== */}
+        <div>
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Heart className="h-5 w-5 text-rose-400" /> Neonatal Vital Signs
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <VitalCard title="Heart Rate" value={currentVitals.heartRate} unit="BPM" icon={<Heart className="h-5 w-5 text-rose-400" />} color="bg-rose-500" normalRange={{ min: 100, max: 180 }} />
+            <VitalCard title="Blood Oxygen (SpO₂)" value={currentVitals.spo2} unit="%" icon={<Wind className="h-5 w-5 text-blue-400" />} color="bg-blue-500" normalRange={{ min: 90, max: 100 }} />
+            <VitalCard title="Body Temperature" value={currentVitals.temperature} unit="°C" icon={<Thermometer className="h-5 w-5 text-amber-400" />} color="bg-amber-500" normalRange={{ min: 36.0, max: 37.5 }} />
+          </div>
         </div>
 
-        {/* Charts Section */}
-        <div className="space-y-4">
+        {/* ===== Vital Signs Graphs ===== */}
+        <div>
           <h2 className="text-lg font-semibold text-white mb-4">Historical Trends</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <VitalChart
-              title="Heart Rate Trend"
-              dataKey="heartRate"
-              color="#f43f5e"
-              unit="BPM"
-              data={chartData}
-            />
-            <VitalChart
-              title="SpO₂ Trend"
-              dataKey="spo2"
-              color="#3b82f6"
-              unit="%"
-              data={chartData}
-            />
-            <VitalChart
-              title="Temperature Trend"
-              dataKey="temperature"
-              color="#f59e0b"
-              unit="°C"
-              data={chartData}
-            />
+            <VitalChart title="Heart Rate Trend" dataKey="heartRate" color="#f43f5e" unit="BPM" data={chartData} />
+            <VitalChart title="SpO₂ Trend" dataKey="spo2" color="#3b82f6" unit="%" data={chartData} />
+            <VitalChart title="Temperature Trend" dataKey="temperature" color="#f59e0b" unit="°C" data={chartData} />
           </div>
         </div>
 
-        {/* Technical Info Footer */}
-        <div className="mt-8 p-4 bg-slate-900/50 border border-slate-700/50 rounded-lg">
-          <h3 className="text-sm font-medium text-slate-300 mb-2">ThingSpeak Integration</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-slate-500">
-            <div>
-              <span className="text-slate-400">Channel:</span> NEONATAL MONITORING
-            </div>
-            <div>
-              <span className="text-slate-400">Channel ID:</span> {THINGSPEAK_CHANNEL_ID}
-            </div>
-            <div>
-              <span className="text-slate-400">Field 1:</span> Heart Rate
-            </div>
-            <div>
-              <span className="text-slate-400">Field 2:</span> SpO₂
-            </div>
-            <div>
-              <span className="text-slate-400">Field 3:</span> Temperature
-            </div>
-            <div>
-              <span className="text-slate-400">Refresh Rate:</span> 15 seconds
-            </div>
-            <div>
-              <span className="text-slate-400">History:</span> Last {HISTORY_COUNT} entries
-            </div>
-            <div>
-              <span className="text-slate-400">Data Source:</span> Arduino/ESP32
-            </div>
-          </div>
+        {/* ===== MIDDLE/BOTTOM: Incubator Monitoring ===== */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Incubator Panel */}
+          <Card className="bg-gradient-to-br from-slate-900/80 to-cyan-950/30 border-cyan-700/30 backdrop-blur-sm overflow-hidden">
+            <div className="h-1.5 w-full bg-gradient-to-r from-cyan-500 to-teal-500" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-cyan-500/20">
+                  <Box className="h-5 w-5 text-cyan-400" />
+                </div>
+                Incubator Monitoring
+              </CardTitle>
+              <p className="text-xs text-slate-400">Real-time incubator environment data</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Incubator Temperature */}
+                <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Thermometer className="h-4 w-4 text-orange-400" />
+                    <span className="text-xs text-slate-400 font-medium">Incubator Temp</span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className={`text-3xl font-bold tabular-nums ${currentVitals.incubatorTemperature === null ? 'text-slate-500' : 'text-orange-300'}`}>
+                      {currentVitals.incubatorTemperature !== null ? currentVitals.incubatorTemperature.toFixed(1) : '--'}
+                    </span>
+                    <span className="text-sm text-slate-400">°C</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Normal: 32–36 °C</p>
+                </div>
+                {/* Incubator Humidity */}
+                <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Droplets className="h-4 w-4 text-teal-400" />
+                    <span className="text-xs text-slate-400 font-medium">Incubator Humidity</span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className={`text-3xl font-bold tabular-nums ${currentVitals.incubatorHumidity === null ? 'text-slate-500' : 'text-teal-300'}`}>
+                      {currentVitals.incubatorHumidity !== null ? currentVitals.incubatorHumidity.toFixed(1) : '--'}
+                    </span>
+                    <span className="text-sm text-slate-400">%</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Normal: 40–60 %</p>
+                </div>
+              </div>
+              {/* Incubator Status */}
+              <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-700/30 flex items-center justify-between">
+                <span className="text-sm text-slate-300 font-medium">Incubator Status</span>
+                <IncubatorStatusBadge temp={currentVitals.incubatorTemperature} humidity={currentVitals.incubatorHumidity} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Technical Info */}
+          <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+                <Activity className="h-5 w-5 text-cyan-400" />
+                System Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[
+                { label: 'Channel ID', value: THINGSPEAK_CHANNEL_ID },
+                { label: 'Field 1', value: 'Heart Rate (BPM)' },
+                { label: 'Field 2', value: 'SpO₂ (%)' },
+                { label: 'Field 3', value: 'Body Temperature (°C)' },
+                { label: 'Field 4', value: 'Incubator Humidity (%)' },
+                { label: 'Field 5', value: 'Incubator Temperature (°C)' },
+                { label: 'Refresh Rate', value: '15 seconds' },
+                { label: 'Data Source', value: 'Arduino / ESP32' },
+                { label: 'History', value: `Last ${HISTORY_COUNT} entries` },
+              ].map((item) => (
+                <div key={item.label} className="flex justify-between py-1.5 px-3 rounded-lg bg-slate-800/30 text-sm">
+                  <span className="text-slate-400">{item.label}</span>
+                  <span className="text-slate-300 font-medium">{item.value}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Footer */}
         <footer className="mt-8 text-center text-sm text-slate-500">
-          <p>© 2026 Hospital Systems</p>
+          <p>© 2026 NeoGuard Hospital Systems</p>
         </footer>
       </main>
     </div>
   );
+};
+
+// === Sub-components ===
+
+const VitalCard: React.FC<{
+  title: string; value: number | null; unit: string; icon: React.ReactNode; color: string; normalRange?: { min: number; max: number };
+}> = ({ title, value, unit, icon, color, normalRange }) => {
+  const isOffline = value === null;
+  const isOutOfRange = normalRange && value !== null && (value < normalRange.min || value > normalRange.max);
+  return (
+    <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm overflow-hidden">
+      <div className={`h-1 w-full ${isOffline ? 'bg-slate-600' : isOutOfRange ? 'bg-red-500' : color}`} />
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex items-center gap-2">
+          <div className={`p-2 rounded-lg ${isOffline ? 'bg-slate-700' : `${color}/20`}`}>{icon}</div>
+          <CardTitle className="text-sm font-medium text-slate-300">{title}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="pb-4">
+        <div className="flex items-baseline gap-1">
+          <span className={`text-4xl font-bold tabular-nums ${isOffline ? 'text-slate-500' : isOutOfRange ? 'text-red-400' : 'text-white'}`}>
+            {isOffline ? '--' : value}
+          </span>
+          <span className="text-lg text-slate-400">{unit}</span>
+        </div>
+        {normalRange && !isOffline && <p className="text-xs text-slate-500 mt-1">Normal: {normalRange.min}–{normalRange.max} {unit}</p>}
+        {isOffline && <p className="text-xs text-slate-500 mt-1">No sensor data available</p>}
+      </CardContent>
+    </Card>
+  );
+};
+
+const VitalChart: React.FC<{
+  title: string; dataKey: keyof ChartDataPoint; color: string; unit: string; data: ChartDataPoint[];
+}> = ({ title, dataKey, color, unit, data }) => {
+  const validData = data.filter(d => d[dataKey] !== null);
+  if (validData.length === 0) {
+    return (
+      <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm">
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-300">{title}</CardTitle></CardHeader>
+        <CardContent className="h-48 flex items-center justify-center"><p className="text-slate-500 text-sm">No historical data available</p></CardContent>
+      </Card>
+    );
+  }
+  return (
+    <Card className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm">
+      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-300">{title}</CardTitle></CardHeader>
+      <CardContent className="h-48">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={validData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+            <defs>
+              <linearGradient id={`gradient-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.05} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+            <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', fontSize: '12px', color: '#e2e8f0' }}
+              labelFormatter={(_, payload) => payload[0]?.payload?.fullTime || ''}
+              formatter={(value: number) => [`${value} ${unit}`, title]}
+            />
+            <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={`url(#gradient-${dataKey})`} dot={false} activeDot={{ r: 4, fill: color, strokeWidth: 2, stroke: '#0f172a' }} connectNulls={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+};
+
+const IncubatorStatusBadge: React.FC<{ temp: number | null; humidity: number | null }> = ({ temp, humidity }) => {
+  if (temp === null && humidity === null) {
+    return <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30">No Data</Badge>;
+  }
+  const tempOk = temp !== null && temp >= 32 && temp <= 36;
+  const humOk = humidity !== null && humidity >= 40 && humidity <= 60;
+  if (tempOk && humOk) {
+    return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Optimal</Badge>;
+  }
+  if ((temp !== null && !tempOk) || (humidity !== null && !humOk)) {
+    return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Needs Attention</Badge>;
+  }
+  return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Normal</Badge>;
 };
 
 export default LiveMonitoring;
