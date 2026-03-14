@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Activity, Heart, Thermometer, Wind, Wifi, WifiOff, Clock, RefreshCw, Droplets, Box, Key } from 'lucide-react';
+import { Activity, Heart, Thermometer, Wind, Wifi, WifiOff, Clock, RefreshCw, Droplets, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   XAxis,
@@ -16,9 +14,9 @@ import {
 } from 'recharts';
 
 const THINGSPEAK_CHANNEL_ID = '3242355';
+const THINGSPEAK_API_KEY = 'FW0N2ZJVIPXBVSIQ';
 const REFRESH_INTERVAL = 15000;
 const HISTORY_COUNT = 100;
-const API_KEY_STORAGE_KEY = 'neoguard_thingspeak_api_key';
 
 interface ThingSpeakEntry {
   created_at: string;
@@ -63,10 +61,6 @@ interface ChartDataPoint {
 type DeviceStatus = 'online' | 'offline' | 'waiting';
 
 const LiveMonitoring: React.FC = () => {
-  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem(API_KEY_STORAGE_KEY) || '');
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [apiKeyValid, setApiKeyValid] = useState<boolean | null>(null);
-  const [showApiKeySetup, setShowApiKeySetup] = useState(!apiKey);
 
   const [currentVitals, setCurrentVitals] = useState<VitalData>({
     heartRate: null, spo2: null, temperature: null,
@@ -99,24 +93,15 @@ const LiveMonitoring: React.FC = () => {
   };
 
   const fetchLatestData = useCallback(async () => {
-    if (!apiKey) return;
     try {
       setIsRefreshing(true);
       setError(null);
 
-      const latestUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${apiKey}&results=1`;
+      const latestUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${THINGSPEAK_API_KEY}&results=1`;
       const latestResponse = await fetch(latestUrl);
-
-      if (latestResponse.status === 401 || latestResponse.status === 403) {
-        setApiKeyValid(false);
-        setShowApiKeySetup(true);
-        setError('Invalid API key. Please enter a valid ThingSpeak Read API Key.');
-        return;
-      }
 
       if (!latestResponse.ok) throw new Error('Failed to fetch from ThingSpeak');
 
-      setApiKeyValid(true);
       const latestData: ThingSpeakResponse = await latestResponse.json();
 
       if (!latestData.feeds || latestData.feeds.length === 0) {
@@ -148,12 +133,11 @@ const LiveMonitoring: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [apiKey, previousEntryId]);
+  }, [previousEntryId]);
 
   const fetchHistoricalData = useCallback(async () => {
-    if (!apiKey) return;
     try {
-      const historyUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${apiKey}&results=${HISTORY_COUNT}`;
+      const historyUrl = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds.json?api_key=${THINGSPEAK_API_KEY}&results=${HISTORY_COUNT}`;
       const historyResponse = await fetch(historyUrl);
       if (!historyResponse.ok) return;
 
@@ -175,31 +159,14 @@ const LiveMonitoring: React.FC = () => {
     } catch (err) {
       console.error('Error fetching historical data:', err);
     }
-  }, [apiKey]);
+  }, []);
 
   useEffect(() => {
-    if (!apiKey || showApiKeySetup) return;
     fetchLatestData();
     fetchHistoricalData();
     const interval = setInterval(() => { fetchLatestData(); fetchHistoricalData(); }, REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [apiKey, showApiKeySetup, fetchLatestData, fetchHistoricalData]);
-
-  const handleApiKeySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = apiKeyInput.trim();
-    if (!trimmed) return;
-    localStorage.setItem(API_KEY_STORAGE_KEY, trimmed);
-    setApiKey(trimmed);
-    setApiKeyValid(null);
-    setShowApiKeySetup(false);
-    setError(null);
-  };
-
-  const handleChangeApiKey = () => {
-    setApiKeyInput(apiKey);
-    setShowApiKeySetup(true);
-  };
+  }, [fetchLatestData, fetchHistoricalData]);
 
   const handleManualRefresh = () => { fetchLatestData(); fetchHistoricalData(); };
 
@@ -213,51 +180,6 @@ const LiveMonitoring: React.FC = () => {
         return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 gap-1.5 px-3 py-1"><WifiOff className="h-3.5 w-3.5" />Offline</Badge>;
     }
   };
-
-  // === API Key Setup Screen ===
-  if (showApiKeySetup) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-slate-900/80 border-slate-700/50 backdrop-blur-sm">
-          <CardHeader className="text-center space-y-3">
-            <div className="mx-auto p-4 rounded-2xl bg-cyan-500/10 w-fit">
-              <Key className="h-10 w-10 text-cyan-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-white">ThingSpeak API Key</CardTitle>
-            <p className="text-sm text-slate-400">
-              Enter your ThingSpeak Read API Key to connect to the neonatal monitoring hardware.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleApiKeySubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="apiKey" className="text-slate-300">Read API Key</Label>
-                <Input
-                  id="apiKey"
-                  type="text"
-                  placeholder="e.g. DXDNPGTNJC504SX4"
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-              {apiKeyValid === false && (
-                <p className="text-red-400 text-sm">Invalid API key. Please check and try again.</p>
-              )}
-              <div className="text-xs text-slate-500 space-y-1">
-                <p>• Find this key in your ThingSpeak channel → API Keys tab</p>
-                <p>• Channel ID: {THINGSPEAK_CHANNEL_ID}</p>
-                <p>• Fields: Heart Rate, SpO2, Temperature, Incubator Humidity, Incubator Temp</p>
-              </div>
-              <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" disabled={!apiKeyInput.trim()}>
-                Connect to ThingSpeak
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   // === Main Dashboard ===
   return (
@@ -277,9 +199,6 @@ const LiveMonitoring: React.FC = () => {
             </div>
             <div className="flex items-center gap-3">
               {getStatusBadge()}
-              <Button variant="outline" size="sm" onClick={handleChangeApiKey} className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
-                <Key className="h-4 w-4 mr-1" /> API Key
-              </Button>
               <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={isRefreshing} className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
               </Button>
