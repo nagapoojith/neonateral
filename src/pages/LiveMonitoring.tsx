@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Activity, Heart, Thermometer, Wind, Wifi, WifiOff, Clock, RefreshCw, Droplets, Box, Key } from 'lucide-react';
+import { Activity, Heart, Thermometer, Wind, Wifi, WifiOff, Clock, RefreshCw, Droplets, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   XAxis,
@@ -16,9 +14,9 @@ import {
 } from 'recharts';
 
 const THINGSPEAK_CHANNEL_ID = '3242355';
+const THINGSPEAK_API_KEY = 'FW0N2ZJVIPXBVSIQ';
 const REFRESH_INTERVAL = 15000;
 const HISTORY_COUNT = 100;
-const API_KEY_STORAGE_KEY = 'neoguard_thingspeak_api_key';
 
 interface ThingSpeakEntry {
   created_at: string;
