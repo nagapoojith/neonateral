@@ -181,51 +181,6 @@ const LiveMonitoring: React.FC = () => {
     }
   };
 
-  // === API Key Setup Screen ===
-  if (showApiKeySetup) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-slate-900/80 border-slate-700/50 backdrop-blur-sm">
-          <CardHeader className="text-center space-y-3">
-            <div className="mx-auto p-4 rounded-2xl bg-cyan-500/10 w-fit">
-              <Key className="h-10 w-10 text-cyan-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-white">ThingSpeak API Key</CardTitle>
-            <p className="text-sm text-slate-400">
-              Enter your ThingSpeak Read API Key to connect to the neonatal monitoring hardware.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleApiKeySubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="apiKey" className="text-slate-300">Read API Key</Label>
-                <Input
-                  id="apiKey"
-                  type="text"
-                  placeholder="e.g. DXDNPGTNJC504SX4"
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-              {apiKeyValid === false && (
-                <p className="text-red-400 text-sm">Invalid API key. Please check and try again.</p>
-              )}
-              <div className="text-xs text-slate-500 space-y-1">
-                <p>• Find this key in your ThingSpeak channel → API Keys tab</p>
-                <p>• Channel ID: {THINGSPEAK_CHANNEL_ID}</p>
-                <p>• Fields: Heart Rate, SpO2, Temperature, Incubator Humidity, Incubator Temp</p>
-              </div>
-              <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" disabled={!apiKeyInput.trim()}>
-                Connect to ThingSpeak
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   // === Main Dashboard ===
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
