@@ -61,10 +61,6 @@ interface ChartDataPoint {
 type DeviceStatus = 'online' | 'offline' | 'waiting';
 
 const LiveMonitoring: React.FC = () => {
-  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem(API_KEY_STORAGE_KEY) || '');
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [apiKeyValid, setApiKeyValid] = useState<boolean | null>(null);
-  const [showApiKeySetup, setShowApiKeySetup] = useState(!apiKey);
 
   const [currentVitals, setCurrentVitals] = useState<VitalData>({
     heartRate: null, spo2: null, temperature: null,
