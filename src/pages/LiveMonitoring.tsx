@@ -26,6 +26,7 @@ interface ThingSpeakEntry {
   field3: string | null;
   field4: string | null;
   field5: string | null;
+  field6: string | null;
 }
 
 interface ThingSpeakResponse {
