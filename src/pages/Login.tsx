@@ -162,8 +162,11 @@ const Login = () => {
                     className="h-12 rounded-xl border-border/60 focus:border-primary"
                   />
                 </div>
-                <Button
-                  type="submit"
+                <div className="flex justify-end">
+                  <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
                   className="w-full h-12 rounded-xl text-base font-semibold gradient-hero hover:opacity-90 transition-opacity mt-2"
                   disabled={isLoading}
                 >
