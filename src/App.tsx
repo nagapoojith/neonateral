@@ -23,6 +23,8 @@ import FeedingStatusPage from "./pages/FeedingStatus";
 import HealthRecords from "./pages/HealthRecords";
 import CryDetectionPage from "./pages/CryDetectionPage";
 import VoiceAssistant from "./pages/VoiceAssistant";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -119,6 +121,8 @@ const AppRoutes = () => {
           </PublicRoute>
         }
       />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/dashboard"
         element={
