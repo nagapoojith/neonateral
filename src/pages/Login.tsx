@@ -167,6 +167,8 @@ const Login = () => {
                     Forgot password?
                   </Link>
                 </div>
+                <Button
+                  type="submit"
                   className="w-full h-12 rounded-xl text-base font-semibold gradient-hero hover:opacity-90 transition-opacity mt-2"
                   disabled={isLoading}
                 >
