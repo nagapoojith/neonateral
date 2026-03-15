@@ -13,7 +13,7 @@ import {
   AreaChart,
 } from 'recharts';
 
-const THINGSPEAK_CHANNEL_ID = '3242355';
+const THINGSPEAK_CHANNEL_ID = '3299978';
 const THINGSPEAK_API_KEY = 'FW0N2ZJVIPXBVSIQ';
 const REFRESH_INTERVAL = 15000;
 const HISTORY_COUNT = 100;
