@@ -26,6 +26,7 @@ interface ThingSpeakEntry {
   field3: string | null;
   field4: string | null;
   field5: string | null;
+  field6: string | null;
 }
 
 interface ThingSpeakResponse {
@@ -79,14 +80,15 @@ const LiveMonitoring: React.FC = () => {
 
     const hrRaw = parseField(entry.field1);
     const spo2Raw = parseField(entry.field2);
-    const tempRaw = parseField(entry.field3);
-    const incHumRaw = parseField(entry.field4);
-    const incTempRaw = parseField(entry.field5);
+    // field3 is SpO2 Min - not used
+    const tempRaw = parseField(entry.field4);      // field4 = Body Temp (°C)
+    const incTempRaw = parseField(entry.field5);    // field5 = Room/Incubator Temp (°C)
+    const incHumRaw = parseField(entry.field6);     // field6 = Humidity (%)
 
     return {
       heartRate: hrRaw !== null && !isNaN(hrRaw) && hrRaw > 0 && hrRaw < 300 ? hrRaw : null,
       spo2: spo2Raw !== null && !isNaN(spo2Raw) && spo2Raw > 0 && spo2Raw <= 100 ? spo2Raw : null,
-      temperature: tempRaw !== null && !isNaN(tempRaw) && tempRaw > -50 && tempRaw < 50 ? tempRaw : null,
+      temperature: tempRaw !== null && !isNaN(tempRaw) && tempRaw > 20 && tempRaw < 45 ? tempRaw : null,
       incubatorHumidity: incHumRaw !== null && !isNaN(incHumRaw) && incHumRaw >= 0 && incHumRaw <= 100 ? incHumRaw : null,
       incubatorTemperature: incTempRaw !== null && !isNaN(incTempRaw) && incTempRaw > -10 && incTempRaw < 60 ? incTempRaw : null,
     };
@@ -309,10 +311,11 @@ const LiveMonitoring: React.FC = () => {
               {[
                 { label: 'Channel ID', value: THINGSPEAK_CHANNEL_ID },
                 { label: 'Field 1', value: 'Heart Rate (BPM)' },
-                { label: 'Field 2', value: 'SpO₂ (%)' },
-                { label: 'Field 3', value: 'Body Temperature (°C)' },
-                { label: 'Field 4', value: 'Incubator Humidity (%)' },
-                { label: 'Field 5', value: 'Incubator Temperature (°C)' },
+                { label: 'Field 2', value: 'SpO₂ Avg (%)' },
+                { label: 'Field 3', value: 'SpO₂ Min (%) — unused' },
+                { label: 'Field 4', value: 'Body Temperature (°C)' },
+                { label: 'Field 5', value: 'Room/Incubator Temp (°C)' },
+                { label: 'Field 6', value: 'Humidity (%)' },
                 { label: 'Refresh Rate', value: '15 seconds' },
                 { label: 'Data Source', value: 'Arduino / ESP32' },
                 { label: 'History', value: `Last ${HISTORY_COUNT} entries` },
