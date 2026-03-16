@@ -529,6 +529,69 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
     return () => clearInterval(rotationInterval);
   }, []);
 
+  // ThingSpeak real data alert checking
+  const thingSpeakAlertCooldownRef = useRef<number>(0);
+  
+  useEffect(() => {
+    if (babies.length === 0) return;
+
+    const checkThingSpeakAlerts = async () => {
+      const now = Date.now();
+      if (now - thingSpeakAlertCooldownRef.current < 60000) return; // 60s cooldown for ThingSpeak alerts
+
+      try {
+        const response = await fetch(
+          `https://api.thingspeak.com/channels/3299978/feeds/last.json?api_key=FW0N2ZJVIPXBVSIQ`
+        );
+        if (!response.ok) return;
+        const entry = await response.json();
+
+        const heartRate = entry.field1 ? parseFloat(entry.field1) : null;
+        const spo2 = entry.field2 ? parseFloat(entry.field2) : null;
+        const bodyTemp = entry.field4 ? parseFloat(entry.field4) : null;
+
+        // Validate readings
+        if (heartRate === null && spo2 === null && bodyTemp === null) return;
+        
+        // Check staleness (>60s old = skip)
+        const entryTime = new Date(entry.created_at).getTime();
+        if (now - entryTime > 120000) return;
+
+        // Build vitals from ThingSpeak data
+        const vitals: VitalSigns = {
+          timestamp: entryTime,
+          heartRate: heartRate && heartRate > 0 && heartRate < 300 ? Math.round(heartRate) : 130,
+          respirationRate: 40,
+          spo2: spo2 && spo2 > 0 && spo2 <= 100 ? Math.round(spo2) : 97,
+          temperature: bodyTemp && bodyTemp > 20 && bodyTemp < 45 ? parseFloat(bodyTemp.toFixed(1)) : 36.8,
+          movement: 5,
+          sleepingPosition: 'back',
+        };
+
+        const { level, reasons } = checkVitalThresholds(vitals);
+        
+        if (level !== 'normal' && reasons.length > 0) {
+          thingSpeakAlertCooldownRef.current = now;
+          const thingSpeakReasons = reasons.map(r => `[IoT Sensor] ${r}`);
+          
+          // Send alert for the first baby (primary monitored baby)
+          const targetBaby = babies[0];
+          if (targetBaby && alertsEnabledRef.current[targetBaby.id]) {
+            console.log(`ThingSpeak alert triggered for ${targetBaby.name}:`, thingSpeakReasons);
+            sendAutoAlertEmail(targetBaby, vitals, level, thingSpeakReasons);
+          }
+        }
+      } catch (error) {
+        console.error('ThingSpeak alert check error:', error);
+      }
+    };
+
+    // Check every 30 seconds
+    checkThingSpeakAlerts();
+    const interval = setInterval(checkThingSpeakAlerts, 30000);
+    return () => clearInterval(interval);
+  }, [babies, sendAutoAlertEmail]);
+
   // Update vitals every 3 seconds and check for automatic alerts
   useEffect(() => {
     const interval = setInterval(() => {
