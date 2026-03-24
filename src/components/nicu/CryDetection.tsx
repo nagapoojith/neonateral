@@ -33,7 +33,7 @@ const CRY_COLORS: Record<CryClassification, { bg: string; text: string; badge: s
   pain: { bg: 'bg-status-critical-bg', text: 'text-status-critical', badge: 'bg-status-critical' },
 };
 
-const CryDetection: React.FC<CryDetectionProps> = ({ showConfidence = false, compact = false, onResultChange }) => {
+const CryDetection = React.forwardRef<HTMLDivElement, CryDetectionProps>(({ showConfidence = false, compact = false, onResultChange }, _ref) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<CryResult | null>(null);
@@ -262,6 +262,7 @@ const CryDetection: React.FC<CryDetectionProps> = ({ showConfidence = false, com
       </CardContent>
     </Card>
   );
-};
+});
+CryDetection.displayName = "CryDetection";
 
 export default CryDetection;
