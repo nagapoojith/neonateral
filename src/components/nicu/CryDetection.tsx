@@ -262,6 +262,7 @@ const CryDetection = React.forwardRef<HTMLDivElement, CryDetectionProps>(({ show
       </CardContent>
     </Card>
   );
-};
+});
+CryDetection.displayName = "CryDetection";
 
 export default CryDetection;
