@@ -167,8 +167,8 @@ const AppRoutes = () => {
       <Route path="/parent" element={<Navigate to="/parent/portal" replace />} />
       <Route path="/parent/login" element={<Navigate to="/parent/portal" replace />} />
       <Route path="/parent/portal" element={<ParentPortal />} />
-      {/* Live IoT Monitoring - Public access for demo/presentation */}
-      <Route path="/live-monitoring" element={<LiveMonitoring />} />
+      {/* Live IoT Monitoring - Inside Dashboard Layout */}
+      <Route path="/live-monitoring" element={<ProtectedRoute><LiveMonitoring /></ProtectedRoute>} />
       {/* New System-Level Pages */}
       <Route
         path="/cry-detection"
