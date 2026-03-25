@@ -61,8 +61,8 @@ interface ChartDataPoint {
 
 type DeviceStatus = 'online' | 'offline' | 'waiting';
 
-const LiveMonitoring: React.FC = () => {
-
+// Inner content component (no layout wrapper)
+const LiveMonitoringContent: React.FC = () => {
   const [currentVitals, setCurrentVitals] = useState<VitalData>({
     heartRate: null, spo2: null, temperature: null,
     incubatorHumidity: null, incubatorTemperature: null,

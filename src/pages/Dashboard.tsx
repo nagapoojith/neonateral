@@ -189,7 +189,7 @@ const Dashboard = () => {
                   { label: 'Monitoring Status', value: 'Active', status: 'normal' as const },
                   { label: 'Alert Escalation', value: 'Enabled', status: 'normal' as const },
                   { label: 'Email Notifications', value: 'Connected', status: 'normal' as const },
-                  { label: 'SMS Alerts', value: 'Ready', status: 'normal' as const },
+                  { label: 'Automatic Alerts', value: 'Active', status: 'normal' as const },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between py-2 px-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                     <span className="text-sm font-medium text-muted-foreground">{item.label}</span>
