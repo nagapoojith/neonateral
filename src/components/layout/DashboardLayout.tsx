@@ -35,6 +35,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
+const VoiceAssistantFab = lazy(() => import('@/components/VoiceAssistantFab'));
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
