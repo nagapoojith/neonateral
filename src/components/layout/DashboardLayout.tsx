@@ -264,6 +264,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       <main className="pt-16 lg:pl-64 min-h-screen">
         <div className="p-4 lg:p-6 max-w-7xl">{children}</div>
       </main>
+
+      <Suspense fallback={null}>
+        <VoiceAssistantFab />
+      </Suspense>
     </div>
   );
 };
