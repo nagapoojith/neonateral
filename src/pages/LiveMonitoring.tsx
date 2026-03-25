@@ -328,7 +328,6 @@ const LiveMonitoringContent: React.FC = () => {
     </div>
   );
 };
-};
 
 // === Sub-components ===
 
