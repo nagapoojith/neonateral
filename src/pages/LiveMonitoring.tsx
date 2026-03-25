@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Activity, Heart, Thermometer, Wind, Wifi, WifiOff, Clock, RefreshCw, Droplets, Box } from 'lucide-react';
