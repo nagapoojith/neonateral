@@ -414,4 +414,11 @@ const IncubatorStatusBadge: React.FC<{ temp: number | null; humidity: number | n
   return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Normal</Badge>;
 };
 
+// Wrapper with DashboardLayout
+const LiveMonitoring: React.FC = () => (
+  <DashboardLayout>
+    <LiveMonitoringContent />
+  </DashboardLayout>
+);
+
 export default LiveMonitoring;
