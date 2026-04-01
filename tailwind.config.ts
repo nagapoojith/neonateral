@@ -74,6 +74,13 @@ export default {
           temp: "hsl(var(--chart-temp))",
           movement: "hsl(var(--chart-movement))",
         },
+        neon: {
+          cyan: "hsl(var(--neon-cyan, 183 100% 50%))",
+          purple: "hsl(var(--neon-purple, 271 76% 53%))",
+          pink: "hsl(var(--neon-pink, 300 100% 50%))",
+          gold: "hsl(var(--neon-gold, 51 100% 50%))",
+          blue: "hsl(var(--neon-blue, 217 91% 60%))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
