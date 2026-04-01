@@ -147,7 +147,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <ThemeSwitcher />
             <Link to="/alerts" className="relative">
               <Button variant="ghost" size="icon" className="relative rounded-xl hover:bg-muted">
                 <Bell className="w-5 h-5" />
