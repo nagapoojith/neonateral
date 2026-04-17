@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Sun, Moon, Sparkles } from 'lucide-react';
+import { Sun, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,20 +9,21 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
-type Theme = 'light' | 'dark' | 'neon';
+type Theme = 'light' | 'neon';
 
 const THEME_KEY = 'neoguard-theme';
 
 const themes: { value: Theme; label: string; icon: React.ReactNode; desc: string }[] = [
-  { value: 'light', label: 'Light', icon: <Sun className="w-4 h-4" />, desc: 'Neumorphism' },
-  { value: 'dark', label: 'Dark', icon: <Moon className="w-4 h-4" />, desc: 'Professional' },
-  { value: 'neon', label: 'Neon RGB', icon: <Sparkles className="w-4 h-4" />, desc: 'Cyberpunk' },
+  { value: 'light', label: 'Clinical', icon: <Sun className="w-4 h-4" />, desc: 'Hospital Neumorphism' },
+  { value: 'neon', label: 'Neon RGB', icon: <Sparkles className="w-4 h-4" />, desc: 'Cyberpunk NICU' },
 ];
 
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem(THEME_KEY) as Theme) || 'neon';
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === 'dark') return 'neon';
+      return (saved as Theme) || 'neon';
     }
     return 'neon';
   });
@@ -30,7 +31,6 @@ export function useTheme() {
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove('dark', 'neon');
-    if (theme === 'dark') root.classList.add('dark');
     if (theme === 'neon') root.classList.add('neon');
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
@@ -49,20 +49,20 @@ export const ThemeSwitcher: React.FC = () => {
           variant="ghost"
           size="icon"
           className={cn(
-            'rounded-xl hover:bg-muted relative',
-            theme === 'neon' && 'hover:shadow-glow-primary'
+            'rounded-xl hover:bg-muted relative transition-all duration-300',
+            theme === 'neon' && 'hover:shadow-glow-primary hover:scale-110'
           )}
         >
           {current.icon}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48 rounded-xl">
+      <DropdownMenuContent align="end" className="w-52 rounded-xl">
         {themes.map((t) => (
           <DropdownMenuItem
             key={t.value}
             onClick={() => setTheme(t.value)}
             className={cn(
-              'flex items-center gap-3 rounded-lg cursor-pointer',
+              'flex items-center gap-3 rounded-lg cursor-pointer transition-all',
               theme === t.value && 'bg-primary/10 text-primary'
             )}
           >
