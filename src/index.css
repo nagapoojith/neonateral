@@ -223,7 +223,10 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.6s ease, color 0.4s ease;
+  }
+  html, body {
+    transition: background-color 0.6s ease;
   }
 
   /* ───── LIGHT mode body — soft neumorphic gradient ───── */
