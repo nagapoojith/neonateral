@@ -624,6 +624,23 @@ serve(async (req) => {
     }
 
     const request: AlertEmailRequest = await req.json();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!request?.to || !request?.babyName || !request?.message || !request?.alertType) {
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+    if (typeof request.to !== "string" || !emailRegex.test(request.to) || request.to.length > 255) {
+      return new Response(JSON.stringify({ error: "Invalid recipient email" }), {
+        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+    if (!["normal", "high", "critical"].includes(request.alertType)) {
+      return new Response(JSON.stringify({ error: "Invalid alertType" }), {
+        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
     console.log("Alert request received:", JSON.stringify({
       to: request.to,
       babyName: request.babyName,
