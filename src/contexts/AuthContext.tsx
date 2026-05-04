@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { logError } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
@@ -53,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      logError('Error fetching user profile:', error);
     }
   };
 
@@ -135,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .insert({ user_id: data.user.id, role });
 
         if (roleError) {
-          console.error('Error setting role:', roleError);
+          logError('Error setting role:', roleError);
         }
       }
 
