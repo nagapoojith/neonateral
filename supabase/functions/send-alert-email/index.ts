@@ -1,10 +1,38 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+async function authorizeMedicalStaff(req: Request): Promise<{ ok: boolean; status?: number; message?: string }> {
+  const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+  if (!authHeader) return { ok: false, status: 401, message: "Unauthorized" };
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !supabaseAnonKey) return { ok: false, status: 500, message: "Server misconfigured" };
+
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: userData, error: userErr } = await client.auth.getUser();
+  if (userErr || !userData?.user) return { ok: false, status: 401, message: "Unauthorized" };
+
+  const { data: roles } = await client
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userData.user.id);
+
+  const allowed = ["doctor", "nurse", "senior_doctor"];
+  if (!roles?.some((r: { role: string }) => allowed.includes(r.role))) {
+    return { ok: false, status: 403, message: "Forbidden" };
+  }
+  return { ok: true };
+}
 
 interface AlertEmailRequest {
   to: string;
