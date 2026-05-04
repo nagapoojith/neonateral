@@ -180,12 +180,12 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
           });
 
           if (error) {
-            console.error(`Email to ${recipientEmail} failed:`, error);
+            logError(`Email to ${recipientEmail} failed:`, error);
             return { email: recipientEmail, success: false };
           }
           return { email: recipientEmail, success: true };
         } catch (emailError) {
-          console.error(`Email to ${recipientEmail} failed:`, emailError);
+          logError(`Email to ${recipientEmail} failed:`, emailError);
           return { email: recipientEmail, success: false };
         }
       });

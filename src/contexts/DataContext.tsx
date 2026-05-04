@@ -496,13 +496,13 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
           });
 
           if (emailError) {
-            console.error(`Error sending alert to ${recipientEmail}:`, emailError);
+            logError(`Error sending alert to ${recipientEmail}:`, emailError);
             return false;
           }
           console.log(`Auto alert sent to ${recipientEmail} for ${baby.name}`);
           return true;
         } catch (error) {
-          console.error(`Error sending alert to ${recipientEmail}:`, error);
+          logError(`Error sending alert to ${recipientEmail}:`, error);
           return false;
         }
       });
