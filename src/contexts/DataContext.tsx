@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
+import { logError } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
@@ -270,7 +271,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching babies:', error);
+      logError('Error fetching babies:', error);
       return;
     }
 
@@ -330,7 +331,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .limit(50);
 
     if (error) {
-      console.error('Error fetching alerts:', error);
+      logError('Error fetching alerts:', error);
       return;
     }
 
@@ -412,7 +413,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       
       return data?.map(r => r.email).filter(e => e && !e.includes('@placeholder.local')) || [];
     } catch (error) {
-      console.error('Error fetching recipients:', error);
+      logError('Error fetching recipients:', error);
       return [];
     }
   }, []);
@@ -456,7 +457,7 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
         .single();
 
       if (alertError) {
-        console.error('Error saving auto alert:', alertError);
+        logError('Error saving auto alert:', alertError);
         return;
       }
 
@@ -515,7 +516,7 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
         });
       }
     } catch (error) {
-      console.error('Error in auto alert:', error);
+      logError('Error in auto alert:', error);
     }
   }, [fetchBabyRecipients]);
 
@@ -582,7 +583,7 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
           }
         }
       } catch (error) {
-        console.error('ThingSpeak alert check error:', error);
+        logError('ThingSpeak alert check error:', error);
       }
     };
 
@@ -679,7 +680,7 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
       .single();
 
     if (error) {
-      console.error('Error adding baby:', error);
+      logError('Error adding baby:', error);
       toast.error('Failed to register baby');
       return;
     }
@@ -695,7 +696,7 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
       .eq('id', babyId);
 
     if (error) {
-      console.error('Error updating baby status:', error);
+      logError('Error updating baby status:', error);
       return;
     }
 
@@ -711,7 +712,7 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
       .eq('id', babyId);
 
     if (error) {
-      console.error('Error toggling alerts:', error);
+      logError('Error toggling alerts:', error);
       toast.error('Failed to update alert settings');
       return;
     }
@@ -733,7 +734,7 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
       .eq('id', babyId);
 
     if (error) {
-      console.error('Error deleting baby:', error);
+      logError('Error deleting baby:', error);
       toast.error('Failed to remove patient. You may not have permission.');
       return;
     }
@@ -760,7 +761,7 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
       .eq('id', alertId);
 
     if (error) {
-      console.error('Error acknowledging alert:', error);
+      logError('Error acknowledging alert:', error);
       toast.error('Failed to acknowledge alert');
       return;
     }
@@ -815,7 +816,7 @@ const sendAutoAlertEmail = useCallback(async (baby: Baby, vitals: VitalSigns, le
       if (error) throw error;
       toast.success(`Alert email sent to ${recipientEmail}`);
     } catch (error) {
-      console.error('Error sending alert email:', error);
+      logError('Error sending alert email:', error);
       toast.error('Failed to send alert email');
     }
   }, []);

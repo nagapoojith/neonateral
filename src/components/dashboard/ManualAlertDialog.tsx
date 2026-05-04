@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logError } from '@/lib/logger';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -86,7 +87,7 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
         });
       }
     } catch (error) {
-      console.error('Error fetching vitals:', error);
+      logError('Error fetching vitals:', error);
     } finally {
       setLoadingVitals(false);
     }
@@ -105,7 +106,7 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
         setSelectedRecipients(data.map(r => r.email));
       }
     } catch (error) {
-      console.error('Error fetching recipients:', error);
+      logError('Error fetching recipients:', error);
     }
   };
 
@@ -207,7 +208,7 @@ const ManualAlertDialog: React.FC<ManualAlertDialogProps> = ({
       setReason('');
       setAlertType('normal');
     } catch (error) {
-      console.error('Error sending manual alert:', error);
+      logError('Error sending manual alert:', error);
       toast.error('Failed to send manual alert');
     } finally {
       setIsSending(false);
