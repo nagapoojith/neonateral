@@ -48,47 +48,15 @@ export function ParentAuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Please enter both Baby Name and Password.' };
       }
 
-      // Query baby by baby_name (case-insensitive) and login_password
-      const { data: babies, error } = await supabase
-        .from('babies')
-        .select('id, baby_name, bed_number, parent_contact, status, login_password')
-        .ilike('baby_name', normalizedBabyName);
-
-      if (error) {
-        console.error('Database query error:', error);
-        return { success: false, error: 'An error occurred while verifying credentials.' };
-      }
-
-      if (!babies || babies.length === 0) {
-        return { success: false, error: 'No baby found with this name. Please verify the information provided by the hospital.' };
-      }
-
-      // Find exact match for password
-      const matchingBaby = babies.find(baby => {
-        const storedPassword = (baby as any).login_password;
-        if (!storedPassword) {
-          return false;
-        }
-        // Exact password match (case-sensitive)
-        return storedPassword === normalizedPassword;
+      const { data, error } = await supabase.functions.invoke('parent-login', {
+        body: { babyName: normalizedBabyName, password: normalizedPassword },
       });
 
-      if (!matchingBaby) {
-        return { 
-          success: false, 
-          error: 'Password does not match our records. Please check the password provided by the hospital.' 
-        };
+      if (error || !data?.success) {
+        return { success: false, error: data?.error || error?.message || 'Unable to verify credentials.' };
       }
 
-      const parentUser: ParentUser = {
-        id: matchingBaby.id,
-        babyId: matchingBaby.id,
-        babyName: matchingBaby.baby_name,
-        bedNumber: matchingBaby.bed_number,
-        parentContact: matchingBaby.parent_contact,
-        status: matchingBaby.status || 'normal',
-      };
-
+      const parentUser: ParentUser = data.parent;
       setParent(parentUser);
       localStorage.setItem('parentSession', JSON.stringify(parentUser));
 

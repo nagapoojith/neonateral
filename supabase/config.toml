@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.neo-voice-chat]
 verify_jwt = false
+
+[functions.parent-login]
+verify_jwt = false

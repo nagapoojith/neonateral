@@ -129,17 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: error.message };
       }
 
-      // Add role after signup
-      if (data.user) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({ user_id: data.user.id, role });
-
-        if (roleError) {
-          logError('Error setting role:', roleError);
-        }
-      }
-
+      // Role is auto-assigned (nurse) by the handle_new_user trigger.
+      // Elevated roles (doctor, senior_doctor) must be granted by an administrator.
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
