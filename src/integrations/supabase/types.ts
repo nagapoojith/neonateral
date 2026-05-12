@@ -333,6 +333,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      verify_baby_password: {
+        Args: { _baby_ids: string[]; _password: string }
+        Returns: {
+          id: string
+        }[]
+      }
     }
     Enums: {
       alert_type: "normal" | "high" | "critical"
